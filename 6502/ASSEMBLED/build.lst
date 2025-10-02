@@ -1,4 +1,4 @@
-mads 2.1.3
+mads 2.1.8
 Source: decompress.asm
      1 				;*********************************************************************************
      2 				;* DUMB ZX2 Decompressor or whatever this will become later...                   *
@@ -10,7 +10,8 @@ Source: decompress.asm
      8
      9 				;* Few definitions needed for building executable Atari binaries
     10
-    11 					icl "atari.def"
+    11 					opt r-
+    12 					icl "atari.def"
 Source: atari.def
      1 				;* some memory addresses and definitions
      2
@@ -29,147 +30,569 @@ Source: atari.def
     15 = 02C6			.def COLOR2			= $02C6
     16 = 02C7			.def COLOR3			= $02C7
     17 = 02C8			.def COLOR4			= $02C8
-    18 = 02F2			.def CH1			= $02F2
-    19 = 02F4			.def CHBAS 			= $02F4
-    20 = 02FC			.def CH				= $02FC
-    21
-    22 = D000			.def HPOSP0          		= $D000	; HORIZONTAL POSITION P0
-    23 = D001			.def HPOSP1          		= $D001	; HORIZONTAL POSITION P1
-    24 = D002			.def HPOSP2          		= $D002	; HORIZONTAL POSITION P2
-    25 = D003			.def HPOSP3          		= $D003	; HORIZONTAL POSITION P3
-    26 = D004			.def HPOSM0          		= $D004	; HORIZONTAL POSITION M0
-    27 = D005			.def HPOSM1          		= $D005	; HORIZONTAL POSITION M1
-    28 = D006			.def HPOSM2          		= $D006	; HORIZONTAL POSITION M2
-    29 = D007			.def HPOSM3          		= $D007	; HORIZONTAL POSITION M3
-    30 = D008			.def SIZEP0          		= $D008	; SIZE P0
-    31 = D009			.def SIZEP1          		= $D009	; SIZE P0
-    32 = D00A			.def SIZEP2          		= $D00A	; SIZE P0
-    33 = D00B			.def SIZEP3          		= $D00B	; SIZE P0
-    34 = D00C			.def SIZEM           		= $D00C	; SIZE M
-    35 = D00D			.def GRAFP0          		= $D00D
-    36 = D00E			.def GRAFP1          		= $D00E
-    37 = D00F			.def GRAFP2          		= $D00F
-    38 = D010			.def GRAFP3          		= $D010
-    39 = D010			.def TRIG0			= $D010
-    40 = D011			.def GRAFM           		= $D011
-    41 = D012			.def COLPM0          		= $D012	; COLOR P0/M0
-    42 = D013			.def COLPM1          		= $D013	; COLOR P1/M1
-    43 = D014			.def COLPM2          		= $D014	; COLOR P2/M2
-    44 = D014			.def NTSCPAL         		= $D014
-    45 = D015			.def COLPM3          		= $D015	; COLOR P3/M3
-    46 = D016			.def COLPF0         		= $D016
-    47 = D017			.def COLPF1          		= $D017
-    48 = D018			.def COLPF2          		= $D018
-    49 = D019			.def COLPF3          		= $D019
-    50 = D01A			.def COLBK           		= $D01A
-    51 = D01B			.def GPRIOR          		= $D01B
-    52 = D01D			.def GRACTL          		= $D01D
-    53
-    54 = D200			.def POKEY 			= $D200
-    55 = D209			.def KBCODE			= $D209
-    56 = D20A			.def RANDOM			= $D20A
-    57 = D20E			.def IRQEN          		= $D20E
-    58 = D20E			.def IRQST          		= $D20E
-    59 = D20F			.def SKCTL			= $D20F
-    60 = D20F			.def SKSTAT			= $D20F
-    61
-    62 = D300			.def PORTA			= $D300
-    63 = D301			.def PORTB           		= $D301
+    18 = 02E0			.def RUNAD			= $02E0
+    19 = 02E2			.def INITAD			= $02E2
+    20 = 02F2			.def CH1			= $02F2
+    21 = 02F4			.def CHBAS 			= $02F4
+    22 = 02FC			.def CH				= $02FC
+    23
+    24 = D000			.def HPOSP0          		= $D000	; HORIZONTAL POSITION P0
+    25 = D001			.def HPOSP1          		= $D001	; HORIZONTAL POSITION P1
+    26 = D002			.def HPOSP2          		= $D002	; HORIZONTAL POSITION P2
+    27 = D003			.def HPOSP3          		= $D003	; HORIZONTAL POSITION P3
+    28 = D004			.def HPOSM0          		= $D004	; HORIZONTAL POSITION M0
+    29 = D005			.def HPOSM1          		= $D005	; HORIZONTAL POSITION M1
+    30 = D006			.def HPOSM2          		= $D006	; HORIZONTAL POSITION M2
+    31 = D007			.def HPOSM3          		= $D007	; HORIZONTAL POSITION M3
+    32 = D008			.def SIZEP0          		= $D008	; SIZE P0
+    33 = D009			.def SIZEP1          		= $D009	; SIZE P0
+    34 = D00A			.def SIZEP2          		= $D00A	; SIZE P0
+    35 = D00B			.def SIZEP3          		= $D00B	; SIZE P0
+    36 = D00C			.def SIZEM           		= $D00C	; SIZE M
+    37 = D00D			.def GRAFP0          		= $D00D
+    38 = D00E			.def GRAFP1          		= $D00E
+    39 = D00F			.def GRAFP2          		= $D00F
+    40 = D010			.def GRAFP3          		= $D010
+    41 = D010			.def TRIG0			= $D010
+    42 = D011			.def GRAFM           		= $D011
+    43 = D012			.def COLPM0          		= $D012	; COLOR P0/M0
+    44 = D013			.def COLPM1          		= $D013	; COLOR P1/M1
+    45 = D014			.def COLPM2          		= $D014	; COLOR P2/M2
+    46 = D014			.def NTSCPAL         		= $D014
+    47 = D015			.def COLPM3          		= $D015	; COLOR P3/M3
+    48 = D016			.def COLPF0         		= $D016
+    49 = D017			.def COLPF1          		= $D017
+    50 = D018			.def COLPF2          		= $D018
+    51 = D019			.def COLPF3          		= $D019
+    52 = D01A			.def COLBK           		= $D01A
+    53 = D01B			.def GPRIOR          		= $D01B
+    54 = D01D			.def GRACTL          		= $D01D
+    55
+    56 = D200			.def POKEY 			= $D200
+    57 = D209			.def KBCODE			= $D209
+    58 = D209			.def STIMER			= $D209
+    59 = D20A			.def RANDOM			= $D20A
+    60 = D20E			.def IRQEN          		= $D20E
+    61 = D20E			.def IRQST          		= $D20E
+    62 = D20F			.def SKCTL			= $D20F
+    63 = D20F			.def SKSTAT			= $D20F
     64
-    65 = D400			.def DMACTL          		= $D400
-    66 = D401			.def CHACTL          		= $D401
-    67 = D402			.def DLISTL          		= $D402
-    68 = D403			.def DLISTH          		= $D403
-    69 = D404			.def HSCROL          		= $D404
-    70 = D405			.def VSCROL          		= $D405
-    71 = D407			.def PMBASE          		= $D407	; STARTING ADRESS PLAYER MISSILE GRAPHICS
-    72 = D409			.def CHBASE          		= $D409
-    73 = D40A			.def WSYNC           		= $D40A
-    74 = D40B			.def VCOUNT          		= $D40B
-    75 = D40E			.def NMIEN          		= $D40E 
-    76 = D40F			.def NMIST           		= $D40F
-    77 = D40F			.def NMIRES			= $D40F
+    65 = D300			.def PORTA			= $D300
+    66 = D301			.def PORTB           		= $D301
+    67
+    68 = D400			.def DMACTL          		= $D400
+    69 = D401			.def CHACTL          		= $D401
+    70 = D402			.def DLISTL          		= $D402
+    71 = D403			.def DLISTH          		= $D403
+    72 = D404			.def HSCROL          		= $D404
+    73 = D405			.def VSCROL          		= $D405
+    74 = D407			.def PMBASE          		= $D407	; STARTING ADRESS PLAYER MISSILE GRAPHICS
+    75 = D409			.def CHBASE          		= $D409
+    76 = D40A			.def WSYNC           		= $D40A
+    77 = D40B			.def VCOUNT          		= $D40B
+    78 = D40E			.def NMIEN          		= $D40E 
+    79 = D40F			.def NMIST           		= $D40F
+    80 = D40F			.def NMIRES			= $D40F
+    81
+    82 = FFFA			.def NMI             		= $FFFA
+    83 = FFFC			.def RESET           		= $FFFC
+    84 = FFFE			.def IRQ             		= $FFFE
+    85
+    86 				;//---------------------------------------------------------------------------------------------
+    87
+    88 				.MACRO CHECK_NTSCPAL
+    89 						lda		NTSCPAL
+    90 						cmp		#1
+    91 				.ENDM
+    92
+    93 				.MACRO SETBKCOL COLVAL
+    94 				.ifdef DEBUG_COLOR
+    95 						lda		#:COLVAL 
+    96 						sta		COLBK
+    97 				.endif
+    98 				.ENDM
+    99
+   100 				.MACRO KIL
+   101 						dta 2
+   102 				.ENDM
+   103
+   104 				;//---------------------------------------------------------------------------------------------
+   105
+   106 = 0040			.def LMS                 	= 64
+   107 = 0010			.def HS                  	= 16
+   108 = 0004			.def MODE4               	= 4
+   109 = 000A			.def MODEA               	= $0A
+   110 = 000D			.def MODED               	= $0D
+   111 = 000E			.def MODEE               	= $0E
+   112 = 000F			.def MODEF               	= $0F
+   113 = 0070			.def BLANK8              	= $70
+   114 = 0080			.def DLI                 	= 128
+   115 = 0041			.def DLIJUMP             	= $41	; jump + wait vsync
+   116 = 0001			.def DL_JUMP             	= $1	; jump 
+   117 = 0000			.def PFSIZE_DISABLED		= 0
+   118 = 0001			.def PFSIZE_NARROW		= 1
+   119 = 0002			.def PFSIZE_NORMAL		= 2
+   120 = 0003			.def PFSIZE_WIDE		= 3
+   121 = 0002			.def GRACTL_PDMA		= 1<<1
+   122 = 0001			.def GRACTL_MDMA		= 1<<0
+    13
+    14 = 0080			ZPG			= $80
+    15 = C000			ZX2BUF			= $C000
+    16 = 2000			DZX2			= $2000		; $0300
+    17 = 3000			ZX2DATA			= $3000		; DRIVEREND
+    18
+    19 = 000B			VLINE			= 11
+    20 = 007C			VBLANK_SCANLINE		= (248 / 2)
+    21 = 009C			PAL_SCANLINE		= (312 / 2)
+    22 = 0083			NTSC_SCANLINE		= (262 / 2)
+    23
+    24 				.struct ZX2Chunk
+    25 = 0000				SongSection	.word
+    26 = 0002				BufferFrom	.word
+    27 = 0004				BufferOffset	.byte
+    28 = 0005				LastOffset	.byte
+    29 = 0006				BitByte		.byte
+    30 = 0007				ByteCount	.byte
+    31 = 0008				StatusCode	.byte
+    32 = 0009				PokeyByte	.byte
+    33 				.ends
+    34
+    35 				;* ----------------------------------------------------------------------------
+    36
+    37 				;* Zeropage variables for quick access, also used for Indirect Addressing Mode
+    38
+    39 					org ZPG
+    40 					
+    41 				.local ZPZX2
+    42 = 0080			TMP0		.ds 1
+    43 = 0081			TMP1		.ds 1
+    44
+    45 = 0082			ChannelOffset	.ds 1
+    46 = 0083			BufferTo	.ds 2
+    47 = 0085			PlayerStatus	.ds 1
+    48 = 0086			LastKeyPressed	.ds 1
+    49 = 0087			StackPointer	.ds 1
+    50
+    51 = 0088			RasterbarColour	.ds 1
+    52 = 0089			RasterbarToggle	.ds 1
+    53
+    54 = 008A			MachineRegion	.ds 1
+    55 = 008B			MachineStereo	.ds 1
+    56 = 008C			AdjustSpeed	.ds 1
+    57
+    58 = 008D			SongPointer	.ds 2
+    59 = 008F			SongUpdate	.ds 1
+    60 = 0090			SongIndex	.ds 1
+    61 = 0091			SongCount	.ds 1
+    62 = 0092			SongSpeed	.ds 1
+    63 = 0093			SongRegion	.ds 1
+    64 = 0094			SongStereo	.ds 1
+    65
+    66 = 0095			SongTimer	.ds 4
+    67
+    68 = 0099			SyncStatus	.ds 1
+    69 = 009A			LastCount	.ds 1
+    70 = 009B			SyncCount	.ds 1
+    71 = 009C			SyncOffset	.ds 1
+    72 = 009D			SyncDelta	.ds 1
+    73 = 009E			SyncDivision	.ds 1
+    74 = 009F			PokeySkctl	.ds 1
+    75
+    76 00A0			Chunk dta ZX2Chunk[9-1]
+    77 				.endl
     78
-    79 = FFFA			.def NMI             		= $FFFA
-    80 = FFFC			.def RESET           		= $FFFC
-    81 = FFFE			.def IRQ             		= $FFFE
+    79 = 00FA			TestByte	.ds 1
+    80
+    81 				;* ----------------------------------------------------------------------------
     82
-    83 				;//---------------------------------------------------------------------------------------------
+    83 				;* Decompression Channel Buffers
     84
-    85 				.MACRO CHECK_NTSCPAL
-    86 						lda		NTSCPAL
-    87 						cmp		#1
-    88 				.ENDM
+    85 					org ZX2BUF
+    86 = C000				.ds (256 * 9)
+    87
+    88 				;* ----------------------------------------------------------------------------
     89
-    90 				.MACRO SETBKCOL COLVAL
-    91 				.ifdef DEBUG_COLOR
-    92 						lda		#:COLVAL 
-    93 						sta		COLBK
-    94 				.endif
-    95 				.ENDM
-    96
-    97 				.MACRO KIL
-    98 						dta 2
-    99 				.ENDM
-   100
-   101 				;//---------------------------------------------------------------------------------------------
-   102
-   103 = 0040			.def LMS                 	= 64
-   104 = 0010			.def HS                  	= 16
-   105 = 0004			.def MODE4               	= 4
-   106 = 000D			.def MODED               	= $0D
-   107 = 000E			.def MODEE               	= $0E
-   108 = 000F			.def MODEF               	= $0F
-   109 = 0070			.def BLANK8              	= $70
-   110 = 0080			.def DLI                 	= 128
-   111 = 0041			.def DLIJUMP             	= $41	; jump + wait vsync
-   112 = 0001			.def DL_JUMP             	= $1	; jump 
-   113 = 0000			.def PFSIZE_DISABLED		= 0
-   114 = 0001			.def PFSIZE_NARROW		= 1
-   115 = 0002			.def PFSIZE_NORMAL		= 2
-   116 = 0003			.def PFSIZE_WIDE		= 3
-   117 = 0002			.def GRACTL_PDMA		= 1<<1
-   118 = 0001			.def GRACTL_MDMA		= 1<<0
-    12
-    13 = 0080			ZPG	= $80
-    14 = 0700			ZX2BUF	= $700
-    15 = 1000			DZX2	= ZX2BUF + ($100 * 9)
-    16
-    17 				.MACRO GOTOCHUNK CHUNK
-    18 				;	.byte :CHUNK + $80
-    19 					.byte $FF, :CHUNK
-    20 				.ENDM
-    21
-    22
-    23 				;* ----------------------------------------------------------------------------
-    24
-    25 				;* Zeropage variables for quick access, also used for Indirect Addressing Mode
-    26
-    27 					org ZPG
-    28
-    29 				.LOCAL ZPZX2
-    30 = 0080			TMP0		.ds 1
-    31 = 0081			TMP1		.ds 1
-    32 = 0082			BufferFrom	.ds 2*9
-    33 = 0094			BufferTo	.ds 2*9
-    34 = 00A6			BufferOffset	.ds 2*9
-    35 = 00B8			ByteLookup	.ds 2*9
-    36 = 00CA			ByteStatus	.ds 2*9
-    37 = 00DC			ByteChunk	.ds 2*9
-    38 = 00B8			LastOffset = ByteLookup
-    39 = 00B9			ByteCount = ByteLookup+1
-    40 = 00CA			StatusCode = ByteStatus
-    41 = 00CB			BitByte = ByteStatus+1
-    42 = 00DC			ChunkIndex = ByteChunk
-    43 = 00DD			Unused = ByteChunk+1
-    44 				.ENDL
-    45
-    46 				;* ----------------------------------------------------------------------------
-    47
-    48 				;* ZX2-based SAP-R playback music driver, with very rudimentary functionalities
-    49
-    50 					org DZX2
-    51 					icl "dzx2.asm"
+    90 				;* Main program will start executing from here, and will loop infinitely
+    91
+    92 					org DZX2
+    93 					
+    94 				DList:
+    95 FFFF> 2000-23EC> 70		.byte BLANK8
+    96 2001 44				.byte LMS|MODE4
+    97 2002 00 C0			.word ZX2BUF
+    98 2004 04 04 04 04 04 04 + 	:27 .byte MODE4
+    99 201F 41				.byte DLIJUMP
+   100 2020 00 20			.word DList
+   101 						
+   102 2022			Start:
+   103 2022 78				sei
+   104 2023 D8				cld
+   105 2024 A9 FE 8D 01 D3		mva #%11111110 PORTB
+   106 2029 A9 00 8D 0E D4		mva #%00000000 NMIEN
+   107 202E 8D 0E D2			sta IRQEN
+   108 2031 8D 00 D4			sta DMACTL
+   109 				;	mwa #DZX2 DLISTL
+   110 				;	mva >ZX2BUF CHBASE
+   111 				;	mva #%00100011 DMACTL
+   112 				;	lda #0
+   113 2034 AA				tax
+   114 					
+   115 2035			Clear:
+   116 2035 9D 80 00			sta.w ZPG,x
+   117 2038 CA				dex
+   118 2039 D0 FA			bne Clear
+   119 203B BA 86 87			tsx:stx ZPZX2.StackPointer
+   120 					
+   121 203E			Initialise:
+   122 203E 20 7F 21			jsr ResetPokey
+   123 2041 20 AE 21			jsr WaitForVBlank
+   124 2044 20 C3 21			jsr DetectMachineRegion
+   125 					;jsr DetectMachineStereo
+   126 2047 A2 64			ldx #100
+   127 2049 20 B6 21			jsr WaitForSomeTime
+   128 204C 58				cli
+   129 					
+   130 204D			Reload:
+   131 204D AD 00 30 85 90		mva ZX2DATA+0 ZPZX2.SongIndex
+   132 2052 AD 01 30 85 91		mva ZX2DATA+1 ZPZX2.SongCount
+   133 2057 AD 02 30 85 89		mva ZX2DATA+2 ZPZX2.RasterbarToggle
+   134 205C AD 03 30 85 88		mva ZX2DATA+3 ZPZX2.RasterbarColour
+   135 					
+   136 2061			Reinit:
+   137 2061 20 83 22			jsr SetNewSongPtrsFull
+   138 2064 20 D4 21			jsr SetPlaybackSpeed
+   139 					
+   140 2067			Wait:
+   141 2067 20 7F 21			jsr ResetPokey
+   142 206A 20 AE 21			jsr WaitForVBlank
+   143 206D 20 A6 21			jsr WaitForSync
+   144
+   145 2070			Loop:
+   146 2070 A9 00 8D 1A D0		mva #0 COLBK
+   147 2075 20 F5 20			jsr HandleKeyboard
+   148 2078 24 85			bit ZPZX2.PlayerStatus
+   149 207A 30 E5			bmi Reinit
+   150 207C 70 E9			bvs Wait
+   151 207E 24 8F			bit ZPZX2.SongUpdate
+   152 2080 10 07			bpl Continue
+   153 2082 A5 88			lda ZPZX2.RasterbarColour
+   154 2084 18				clc
+   155 2085 69 10			adc #$10
+   156 2087 85 88			sta ZPZX2.RasterbarColour
+   157 					
+   158 2089			Continue:
+   159 2089 8D 0A D4			sta WSYNC
+   160 208C 20 3D 22			jsr WaitForScanline
+   161 208F 8D 0A D4			sta WSYNC
+   162 2092 A5 88 8D 1A D0		mva ZPZX2.RasterbarColour COLBK
+   163 2097 20 48 21			jsr SetPokey
+   164 209A 20 7D 23			jsr DecompressZX2
+   165 209D 20 6C 22			jsr CheckForTwoToneBit
+   166 20A0 4C 70 20			jmp Loop
+   167 					
+   168 20A3			Stop:
+   169 20A3 A9 80 85 85			mva #%10000000 ZPZX2.PlayerStatus
+   170 20A7 60				rts
+   171 					
+   172 20A8			Pause:
+   173 20A8 24 85			bit ZPZX2.PlayerStatus
+   174 20AA 30 07			bmi Play
+   175 20AC 70 05			bvs Play
+   176 20AE A9 40 85 85			mva #%01000000 ZPZX2.PlayerStatus
+   177 20B2 60				rts
+   178 					
+   179 20B3			Play:
+   180 20B3 A9 00 85 85			mva #%00000000 ZPZX2.PlayerStatus
+   181 20B7 60				rts
+   182 					
+   183 20B8			Exit:
+   184 20B8 20 7F 21			jsr ResetPokey
+   185 20BB 20 AE 21			jsr WaitForVBlank
+   186 20BE A9 C0 8D 0E D4		mva #%11000000 NMIEN
+   187 20C3 A9 FF 8D 01 D3		mva #%11111111 PORTB
+   188 20C8 A6 87 9A			ldx:txs ZPZX2.StackPointer
+   189 20CB A0 01			ldy #1
+   190 20CD 18				clc
+   191 20CE 60				rts
+   192 					
+   193 20CF			SkipChunk:
+   194 20CF A9 FF 85 8F			mva #%11111111 ZPZX2.SongUpdate
+   195 20D3 60				rts
+   196 						
+   197 20D4			SeekNext:
+   198 20D4 A5 91			lda ZPZX2.SongCount
+   199 20D6 E7 90			isb ZPZX2.SongIndex
+   200 20D8 F0 0A			beq SeekLoop
+   201 20DA B0 0A			bcs SeekSet
+   202 					
+   203 20DC			SeekPrevious:
+   204 20DC A5 91			lda ZPZX2.SongCount
+   205 20DE C7 90			dcp ZPZX2.SongIndex
+   206 20E0 B0 04			bcs SeekSet
+   207 20E2 E9 00			sbc #0
+   208 					
+   209 20E4			SeekLoop:
+   210 20E4 85 90			sta ZPZX2.SongIndex
+   211 					
+   212 20E6			SeekSet:
+   213 20E6 20 7F 21			jsr ResetPokey
+   214 20E9 20 83 22			jsr SetNewSongPtrsFull
+   215 20EC 20 D4 21			jsr SetPlaybackSpeed
+   216 20EF 20 AE 21			jsr WaitForVBlank
+   217 20F2 4C A6 21			jmp WaitForSync
+   218 					
+   219 20F5			HandleKeyboard:
+   220 20F5 AD 0F D2			lda SKSTAT			; Serial Port Status
+   221 20F8 29 04			and #%00000100			; Last Key still pressed?
+   222 20FA F0 06			beq HandleKeyboardContinue	; If yes, process further below
+   223 20FC A9 FF 85 86			mva #$FF ZPZX2.LastKeyPressed	; Reset Last Key registered
+   224 2100 30 2B			bmi HandleKeyboardDone		; Unconditional
+   225 					
+   226 2102			HandleKeyboardContinue:
+   227 2102 AD 09 D2			lda KBCODE			; Keyboard Code
+   228 2105 29 3F			and #%00111111			; Clear the SHIFT and CTRL bits out of the Key Identifier
+   229 2107 C5 86			cmp ZPZX2.LastKeyPressed	; Last Key currently held down?
+   230 2109 85 86			sta ZPZX2.LastKeyPressed	; Update Last Key registered
+   231 210B F0 20			beq HandleKeyboardDone		; If yes, there is nothing else to do here
+   232 210D C9 08			cmp #8				; 'O' Key?
+   233 210F F0 92			beq Stop			; Yes -> Stop Playback and wait for new input
+   234 2111 C9 0A			cmp #10				; 'P' Key?
+   235 2113 F0 93			beq Pause			; Yes -> Toggle Play or Pause and wait for new input
+   236 2115 C9 0C			cmp #12				; 'Enter' Key?
+   237 2117 F0 B6			beq SkipChunk			; Yes -> Skip Playback to Next Chunk
+   238 2119 C9 1C			cmp #28				; Escape Key?
+   239 211B F0 9B			beq Exit			; Yes -> Stop Playback and Return to DOS
+   240 211D C9 1E			cmp #30				; '2' Key?
+   241 211F F0 B3			beq SeekNext			; Yes -> Seek Next Song
+   242 2121 C9 1F			cmp #31				; '1' Key?
+   243 2123 F0 B7			beq SeekPrevious		; Yes -> Seek Previous Song
+   244 2125 C9 30			cmp #48				; '9' Key?
+   245 2127 F0 05			beq SpeedDown			; Yes -> Set Speed Down
+   246 2129 C9 32			cmp #50				; '0' Key?
+   247 212B F0 05			beq SpeedUp			; Yes -> Set Speed Up
+   248 					
+   249 212D			HandleKeyboardDone:
+   250 212D 60				rts
+   251 					
+   252 212E			SpeedDown:
+   253 212E C6 92			dec ZPZX2.SongSpeed
+   254 2130 B0 04			bcs SetSpeed
+   255 2132			SpeedUp:
+   256 2132 E6 92			inc ZPZX2.SongSpeed
+   257 2134 B0 00			bcs SetSpeed
+   258 2136			SetSpeed:
+   259 2136 A2 07			ldx #%00000111
+   260 2138 A5 92			lda ZPZX2.SongSpeed
+   261 213A 87 92			sax ZPZX2.SongSpeed
+   262 213C 20 7F 21			jsr ResetPokey
+   263 213F 20 D4 21			jsr SetPlaybackSpeed
+   264 2142 20 AE 21			jsr WaitForVBlank
+   265 2145 4C A6 21			jmp WaitForSync
+   266 					
+   267 				;* ----------------------------------------------------------------------------
+   268 					
+   269 				;* Set POKEY registers at least once per VBI using the last buffered values
+   270
+   271 2148			.proc SetPokey
+   272 2148 A2 00			ldx #0
+   273 214A B5 A9			lda ZPZX2.Chunk[0].PokeyByte,x
+   274 214C B4 B3			ldy ZPZX2.Chunk[1].PokeyByte,x
+   275 214E 8D 00 D2			sta $D200
+   276 2151 B5 BD			lda ZPZX2.Chunk[2].PokeyByte,x
+   277 2153 8C 01 D2			sty $D201
+   278 2156 B4 C7			ldy ZPZX2.Chunk[3].PokeyByte,x
+   279 2158 8D 02 D2			sta $D202
+   280 215B B5 D1			lda ZPZX2.Chunk[4].PokeyByte,x
+   281 215D 8C 03 D2			sty $D203
+   282 2160 B4 DB			ldy ZPZX2.Chunk[5].PokeyByte,x
+   283 2162 8D 04 D2			sta $D204
+   284 2165 B5 E5			lda ZPZX2.Chunk[6].PokeyByte,x
+   285 2167 8C 05 D2			sty $D205
+   286 216A B4 EF			ldy ZPZX2.Chunk[7].PokeyByte,x
+   287 216C 8D 06 D2			sta $D206
+   288 216F B5 F9			lda ZPZX2.Chunk[8].PokeyByte,x
+   289 2171 8C 07 D2			sty $D207
+   290 2174 B4 9F			ldy ZPZX2.PokeySkctl,x
+   291 2176 8D 08 D2			sta $D208
+   292 2179 EA EA			#CYCLE #4
+   293 217B 8C 0F D2			sty $D20F
+   294 217E 60				rts
+   295 				.endp
+   296 					
+   297 				;* ----------------------------------------------------------------------------
+   298
+   299 217F			.proc ResetPokey
+   300 217F A9 03 85 9F			mva #%00000011 ZPZX2.PokeySkctl	; Default SKCTL value, needed for handling Keyboard
+   301 2183 A9 00			lda #0				; Default POKEY values
+   302 2185 85 A9 85 B3 85 BD + 	:9 sta ZPZX2.Chunk[#].PokeyByte	; Clear all POKEY values in memory
+   303 2197 8D 0A D4			sta WSYNC
+   304 219A 8D 0F D2			sta $D20F
+   305 219D 8D 0A D4			sta WSYNC
+   306 21A0 8D 09 D2			sta STIMER
+   307 21A3 4C 48 21			jmp SetPokey
+   308 				.endp
+   309
+   310 				;* ----------------------------------------------------------------------------
+   311
+   312 21A6			.proc WaitForSync
+   313 21A6 AD 0B D4			lda VCOUNT		; Get Current Scanline / 2
+   314 21A9 C9 0B			cmp #VLINE		; Is it time for Sync yet?
+   315 21AB D0 F9			bne WaitForSync		; Not Equal -> Keep waiting
+   316 21AD 60				rts
+   317 				.endp
+   318
+   319 				;* ----------------------------------------------------------------------------
+   320
+   321 21AE			.proc WaitForVBlank
+   322 21AE AD 0B D4			lda VCOUNT		; Get Current Scanline / 2
+   323 21B1 C9 7C			cmp #VBLANK_SCANLINE	; Is it time for VBlank yet?
+   324 21B3 D0 F9			bne WaitForVBlank	; Not Equal -> Keep waiting
+   325 21B5 60				rts
+   326 				.endp
+   327
+   328 				;* ----------------------------------------------------------------------------
+   329
+   330 				;* Wait for a specific number of Frames, ranging from 1 and 256
+   331 				;* Set the parameter in the X Register before calling this routine
+   332
+   333 21B6			.proc WaitForSomeTime
+   334 21B6 8D 0A D4 8D 0A D4		:2 sta WSYNC		; Forcefully increment VCOUNT at least once
+   335 21BC 20 AE 21			jsr WaitForVBlank	; Wait until the end of the current Frame
+   336 21BF CA D0 F4			dex:bne WaitForSomeTime	; if (--X != 0) -> Keep waiting
+   337 21C2 60				rts
+   338 				.endp
+   339
+   340 				;* ----------------------------------------------------------------------------
+   341 					
+   342 				;* Detect the actual Machine Region in order to adjust Playback Speed among other things
+   343 				;* PAL -> 0, NTSC -> 1
+   344
+   345 21C3			.proc DetectMachineRegion
+   346 21C3 AD 0B D4			lda VCOUNT
+   347 21C6 F0 03			beq DetectMachineRegion_a
+   348 21C8 AA				tax
+   349 21C9 D0 F8			bne DetectMachineRegion
+   350 					
+   351 21CB			DetectMachineRegion_a:
+   352 21CB 85 8A			sta ZPZX2.MachineRegion
+   353 21CD E0 9B			cpx #PAL_SCANLINE-1
+   354 21CF 10 02 E6 8A			spl:inc ZPZX2.MachineRegion
+   355 21D3 60				rts
+   356 				.endp
+   357
+   358 				;* ----------------------------------------------------------------------------
+   359
+   360 				;* Set Playback speed using precalculated lookup tables, depending on the Machine Region
+   361 				;* Cross-region adjustments are also supported, with few compatibility compromises
+   362
+   363 21D4			.proc SetPlaybackSpeed
+   364 21D4 A5 8A			lda ZPZX2.MachineRegion
+   365 21D6 24 8C			bit ZPZX2.AdjustSpeed
+   366 21D8 10 07			bpl SetPlaybackSpeed_b
+   367 21DA C5 93			cmp ZPZX2.SongRegion
+   368 21DC F0 03			beq SetPlaybackSpeed_b
+   369
+   370 21DE			SetPlaybackSpeed_a:
+   371 21DE 18				clc
+   372 21DF 69 02			adc #2
+   373 					
+   374 21E1			SetPlaybackSpeed_b:
+   375 21E1 0A				asl @
+   376 21E2 0A				asl @
+   377 21E3 0A				asl @
+   378 21E4 65 92			adc ZPZX2.SongSpeed
+   379 21E6 A8				tay
+   380 21E7 B9 FD 21			lda ScanlineDivisionTable,y
+   381 21EA 85 9E			sta ZPZX2.SyncDivision
+   382 21EC B9 1D 22			lda ScanlineCountTable,y
+   383 21EF 85 9B			sta ZPZX2.SyncCount
+   384 					
+   385 21F1			SetPlaybackSpeed_c:
+   386 21F1 A9 0B			lda #VLINE
+   387 21F3 85 9A			sta ZPZX2.LastCount
+   388 21F5 A0 00			ldy #0
+   389 21F7 84 9C			sty ZPZX2.SyncOffset
+   390 21F9 88				dey
+   391 21FA 84 99			sty ZPZX2.SyncStatus
+   392 21FC 60				rts
+   393 					
+   394 21FD			ScanlineDivisionTable:
+   395 21FD 9C 4E 34 27 1F 1A + DivPAL	.byte $9C,$4E,$34,$27,$1F,$1A,$16,$13
+   396 2205 83 42 2C 21 1A 16 + DivNTSC	.byte $83,$42,$2C,$21,$1A,$16,$13,$10
+   397 220D 82 41 2D 23 1A 14 + OffPAL	.byte $82,$41,$2D,$23,$1A,$14,$14,$0F
+   398 2215 9C 4E 34 27 1E 1A + OffNTSC	.byte $9C,$4E,$34,$27,$1E,$1A,$18,$15
+   399
+   400 221D			ScanlineCountTable:
+   401 221D 9C 9C 9C 9C 9B 9C + NumPAL	.byte $9C,$9C,$9C,$9C,$9B,$9C,$9A,$98
+   402 2225 83 84 84 84 82 84 + NumNTSC	.byte $83,$84,$84,$84,$82,$84,$85,$80
+   403 222D 9C 9C A2 A8 9C 90 + FixPAL	.byte $9C,$9C,$A2,$A8,$9C,$90,$A8,$90
+   404 2235 82 82 82 82 7D 82 + FixNTSC	.byte $82,$82,$82,$82,$7D,$82,$8C,$8C
+   405 				.endp
+   406
+   407 				;* ----------------------------------------------------------------------------
+   408
+   409 223D			.proc WaitForScanline
+   410 223D A5 9C			lda ZPZX2.SyncOffset
+   411 223F 06 99			asl ZPZX2.SyncStatus
+   412 2241 90 22			bcc WaitForScanlineSkip
+   413 					
+   414 2243			WaitForScanlineContinue:
+   415 2243 AD 0B D4			lda VCOUNT
+   416 2246 AA				tax
+   417 2247 E5 9A			sbc ZPZX2.LastCount
+   418 2249 B0 02 65 9B			scs:adc ZPZX2.SyncCount
+   419 224D B0 0A			bcs WaitForScanlineNext
+   420 224F 69 FF			adc #-1
+   421 2251 49 FF			eor #-1
+   422 2253 65 9C			adc ZPZX2.SyncOffset
+   423 2255 85 9C			sta ZPZX2.SyncOffset
+   424 2257 A9 00			lda #0
+   425 					
+   426 2259			WaitForScanlineNext:
+   427 2259 85 9D			sta ZPZX2.SyncDelta
+   428 225B 86 9A			stx ZPZX2.LastCount
+   429 225D A5 9C			lda ZPZX2.SyncOffset
+   430 225F E5 9D			sbc ZPZX2.SyncDelta
+   431 2261 85 9C			sta ZPZX2.SyncOffset
+   432 2263 B0 DE			bcs WaitForScanlineContinue
+   433 					
+   434 2265			WaitForScanlineSkip:
+   435 2265 65 9E			adc ZPZX2.SyncDivision
+   436 2267 85 9C			sta ZPZX2.SyncOffset
+   437 2269 66 99			ror ZPZX2.SyncStatus
+   438 					
+   439 226B			WaitForScanlineDone:
+   440 226B 60				rts
+   441 				.endp
+   442
+   443 				;* ----------------------------------------------------------------------------
+   444
+   445 226C			.proc CheckForTwoToneBit
+   446 226C			CheckForTwoToneBitLeft:
+   447 226C A2 03			ldx #$03
+   448 226E A5 B3			lda ZPZX2.Chunk[1].PokeyByte	; AUDC0
+   449 2270 C9 F0			cmp #$F0
+   450 2272 B0 0C			bcs CheckForTwoToneBitLeft_a
+   451 2274 A8				tay
+   452 2275 29 10			and #$10
+   453 2277 F0 07			beq CheckForTwoToneBitLeft_a
+   454 2279 98				tya
+   455 227A 49 10			eor #$10
+   456 227C 85 B3			sta ZPZX2.Chunk[1].PokeyByte
+   457 227E A2 8B			ldx #$8B
+   458 					
+   459 2280			CheckForTwoToneBitLeft_a:
+   460 2280 86 9F			stx ZPZX2.PokeySkctl
+   461
+   462 2282			CheckForTwoToneBitDone:
+   463 2282 60				rts
+   464 				.endp
+   465
+   466 				;* ----------------------------------------------------------------------------
+   467
+   468 				;* ZX2-based SAP-R playback music driver, with very rudimentary functionalities
+   469
+   470 2283				icl "dzx2.asm"	
 Source: dzx2.asm
      1 				; -----------------------------------------------------------------------------
      2 				; ZX2 decoder by Einar Saukas, 6502 port by Vin Samuel (VinsCool)
@@ -181,784 +604,1027 @@ Source: dzx2.asm
      8
      9 				//-------------------------------------------//
     10
-    11 				DecompressZX2:
-    12 FFFF> 1000-1134> A2 10		ldx #8*2
+    11 				;* Song index initialisation subroutine, load pointers using index number, as well as loop point when it exists
+    12 				;* If the routine is called from this label, index and loop are restarted
     13
-    14 1002			DecompressZX2Continue:
-    15 1002 B4 CA			ldy ZPZX2.StatusCode,x
-    16 1004 30 21			bmi CopyFromLastOffset		; State = $FF -> Copy From Last Offset
-    17 1006 D0 03			bne CopyFromLiteral		; State = $01 -> Copy From Literal
-    18 1008 20 67 10			jsr DecompressZX2Reset		; State = $00 -> Not Initialised, or End of File was reached
-    19
-    20 				//-------------------------------------------//
-    21
-    22 100B			CopyFromLiteral:
-    23 				;	jsr GetByteFrom
-    24 100B A1 82			lda (ZPZX2.BufferFrom,x)
-    25 100D F6 82			inc ZPZX2.BufferFrom,x
-    26 100F D0 02			bne CopyFromLiteral_a
-    27 1011 F6 83			inc ZPZX2.BufferFrom+1,x
-    28 1013			CopyFromLiteral_a:
-    29 				;	jsr WriteByteTo
-    30 1013 81 94			sta (ZPZX2.BufferTo,x)
-    31 1015 9D ED 10			sta SDWPOK0,x
-    32 1018 F6 94			inc ZPZX2.BufferTo,x
-    33 101A D6 B9			dec ZPZX2.ByteCount,x
-    34 101C D0 44			bne ProcessNextIteration
-    35 101E 16 CB			asl ZPZX2.BitByte,x
-    36 1020 B0 1F			bcs CopyFromNewOffset		;* Carry Set -> Copy From New Offset, Carry Not Set -> Copy From Last Offset
-    37 1022 20 96 10			jsr GetElias
-    38 1025 90 2D			bcc SetBufferOffset		; Unconditional
+    14 2283			SetNewSongPtrsFull:
+    15 2283 A5 90			lda ZPZX2.SongIndex
+    16 2285 0A				asl @
+    17 2286 AA				tax
+    18 2287 BD 04 30 85 8D BD + 	mwa ZX2DATA+4,x ZPZX2.SongPointer
+    19 2291 A0 00			ldy #0
+    20 2293 B1 8D 85 93			mva (ZPZX2.SongPointer),y ZPZX2.SongRegion
+    21 2297 C8				iny
+    22 2298 B1 8D 85 92			mva (ZPZX2.SongPointer),y ZPZX2.SongSpeed
+    23 229C C8				iny
+    24 229D B1 8D 85 8C			mva (ZPZX2.SongPointer),y ZPZX2.AdjustSpeed
+    25 22A1 C8				iny
+    26 22A2 B1 8D 85 94			mva (ZPZX2.SongPointer),y ZPZX2.SongStereo
+    27 22A6 C8				iny
+    28 22A7 B1 8D 85 95			mva (ZPZX2.SongPointer),y ZPZX2.SongTimer+0
+    29 22AB C8				iny
+    30 22AC B1 8D 85 96			mva (ZPZX2.SongPointer),y ZPZX2.SongTimer+1
+    31 22B0 C8				iny
+    32 22B1 B1 8D 85 97			mva (ZPZX2.SongPointer),y ZPZX2.SongTimer+2
+    33 22B5 C8				iny
+    34 22B6 B1 8D 85 98			mva (ZPZX2.SongPointer),y ZPZX2.SongTimer+3
+    35 22BA C8				iny
+    36 22BB B1 8D 85 A0 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[0].SongSection
+    37 22C4 C8				iny
+    38 22C5 B1 8D 85 AA C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[1].SongSection
+    39 22CE C8				iny
+    40 22CF B1 8D 85 B4 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[2].SongSection
+    41 22D8 C8				iny
+    42 22D9 B1 8D 85 BE C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[3].SongSection
+    43 22E2 C8				iny
+    44 22E3 B1 8D 85 C8 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[4].SongSection
+    45 22EC C8				iny
+    46 22ED B1 8D 85 D2 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[5].SongSection
+    47 22F6 C8				iny
+    48 22F7 B1 8D 85 DC C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[6].SongSection
+    49 2300 C8				iny
+    50 2301 B1 8D 85 E6 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[7].SongSection
+    51 230A C8				iny
+    52 230B B1 8D 85 F0 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[8].SongSection
+    53 2314 C8				iny
+    54 2315 98				tya
+    55 2316 18				clc
+    56 2317 65 8D			adc ZPZX2.SongPointer+0
+    57 2319 85 8D			sta ZPZX2.SongPointer+0
+    58 231B A5 8E			lda ZPZX2.SongPointer+1
+    59 231D 69 00			adc #0
+    60 231F 85 8E			sta ZPZX2.SongPointer+1
+    61 					
+    62 				//-------------------------------------------//
+    63
+    64 				;* If the routine is called from this label, it will use the current parameters instead
+    65
+    66 2321			SetNewSongPtrs:
+    67 2321 A2 50			ldx #.len ZX2Chunk*(9-1)
+    68 					
+    69 2323			SetNewSongPtrs_a:
+    70 2323 A1 A0			lda (ZPZX2.Chunk[0].SongSection,x)
+    71 2325 F6 A0 D0 02 F6 A1		inw ZPZX2.Chunk[0].SongSection,x
+    72 				;	bpl SetNewSongPtrs_b
+    73 232B C9 80			cmp #SEQCMD.GOTO
+    74 232D 90 0F			bcc SetNewSongPtrs_b
+    75 232F 49 7F			eor #%01111111
+    76 2331 18				clc
+    77 2332 75 A0			adc ZPZX2.Chunk[0].SongSection+0,x
+    78 2334 95 A0			sta ZPZX2.Chunk[0].SongSection+0,x
+    79 2336 B5 A1			lda ZPZX2.Chunk[0].SongSection+1,x
+    80 2338 E9 00			sbc #0
+    81 233A 95 A1			sta ZPZX2.Chunk[0].SongSection+1,x
+    82 233C B0 E5			bcs SetNewSongPtrs_a			; Unconditional
+    83 					
+    84 233E			SetNewSongPtrs_b:
+    85 				;	inw ZPZX2.Chunk[0].SongSection,x
+    86 233E 0A				asl @
+    87 233F A8				tay
+    88 2340 B1 8D 95 A2 C8 B1 + 	mwa (ZPZX2.SongPointer),y ZPZX2.Chunk[0].BufferFrom,x
+    89 					
+    90 2349			SetNewSongPtrs_c:	
+    91 2349 A0 00			ldy #0
+    92 234B 94 A5			sty ZPZX2.Chunk[0].LastOffset,x		; Reset Last Offset to 0
+    93 234D 94 A8			sty ZPZX2.Chunk[0].StatusCode,x		; Set state to Copy From Literal
+    94 234F C8				iny
+    95 2350 38				sec
+    96 2351 20 6C 23			jsr GetEliasSkip
+    97 2354 8A CB 0A			txa:sbx #.len ZX2Chunk
+    98 2357 10 CA			bpl SetNewSongPtrs_a
+    99 2359 85 8F			sta ZPZX2.SongUpdate
+   100 235B 60				rts
+   101 					
+   102 				//-------------------------------------------//
+   103
+   104 235C			GetElias:
+   105 235C A9 01			lda #%00000001
+   106 235E 16 A6			asl ZPZX2.Chunk[0].BitByte,x
+   107 2360 F0 09			beq GetEliasByte
+   108 2362 90 16			bcc GetEliasDone
+   109 					
+   110 2364			GetEliasLoop:
+   111 2364 16 A6			asl ZPZX2.Chunk[0].BitByte,x
+   112 2366 2A				rol @
+   113 2367 16 A6			asl ZPZX2.Chunk[0].BitByte,x
+   114 2369 D0 0D			bne GetEliasNext
+   115 					
+   116 236B			GetEliasByte:
+   117 236B A8				tay
+   118 					
+   119 236C			GetEliasSkip:
+   120 236C A1 A2			lda (ZPZX2.Chunk[0].BufferFrom,x)
+   121 236E F6 A2 D0 02 F6 A3		inw ZPZX2.Chunk[0].BufferFrom,x
+   122 2374 2A				rol @
+   123 2375 95 A6			sta ZPZX2.Chunk[0].BitByte,x
+   124 2377 98				tya
+   125 					
+   126 2378			GetEliasNext:
+   127 2378 B0 EA			bcs GetEliasLoop
+   128 					
+   129 237A			GetEliasDone:
+   130 237A 95 A7			sta ZPZX2.Chunk[0].ByteCount,x
+   131 237C 60				rts
+   132 					
+   133 				//-------------------------------------------//
+   134
+   135 237D			DecompressZX2:
+   136 237D 24 8F			bit ZPZX2.SongUpdate			; Was End Of File reached?
+   137 237F 10 03 20 21 23		spl:jsr SetNewSongPtrs			; Initialise new Chunks for the Next Iteration
+   138 2384 A9 C0 85 84			mva >ZX2BUF ZPZX2.BufferTo+1		; Set Channel Pointer
+   139 2388 C6 82			dec ZPZX2.ChannelOffset			; Update Channel Offset
+   140 238A A2 50			ldx #.len ZX2Chunk*(9-1)
+   141 					
+   142 238C			DecompressZX2Continue:
+   143 238C B5 A8			lda ZPZX2.Chunk[0].StatusCode,x		;* Bit 7 Clear -> Copy From Literal, Bit 7 Set -> Copy From Last Offset
+   144 238E 30 1D			bmi CopyFromLastOffset
+   145 					
+   146 				//-------------------------------------------//
+   147
+   148 2390			CopyFromLiteral:
+   149 2390 A1 A2			lda (ZPZX2.Chunk[0].BufferFrom,x)
+   150 2392 F6 A2 D0 02 F6 A3		inw ZPZX2.Chunk[0].BufferFrom,x
+   151 2398 A4 82			ldy ZPZX2.ChannelOffset
+   152 239A 91 83			sta (ZPZX2.BufferTo),y
+   153 239C 95 A9			sta ZPZX2.Chunk[0].PokeyByte,x
+   154 239E D6 A7			dec ZPZX2.Chunk[0].ByteCount,x
+   155 23A0 D0 43			bne ProcessNextIteration
+   156 23A2 D6 A8			dec ZPZX2.Chunk[0].StatusCode,x		; Set state to Copy From Last Offset, it could never be Literal twice
+   157 23A4 16 A6			asl ZPZX2.Chunk[0].BitByte,x		;* Carry Set -> Copy From New Offset, Carry Clear -> Copy From Last Offset
+   158 23A6 B0 20			bcs CopyFromNewOffset
+   159 23A8 20 5C 23			jsr GetElias
+   160 23AB 90 32			bcc SetLastOffset			; Unconditional
+   161 					
+   162 				//-------------------------------------------//
+   163
+   164 23AD			CopyFromLastOffset:
+   165 23AD B4 A4			ldy ZPZX2.Chunk[0].BufferOffset,x
+   166 23AF D6 A4			dec ZPZX2.Chunk[0].BufferOffset,x
+   167 23B1 B1 83			lda (ZPZX2.BufferTo),y
+   168 23B3 A4 82			ldy ZPZX2.ChannelOffset
+   169 23B5 91 83			sta (ZPZX2.BufferTo),y
+   170 23B7 95 A9			sta ZPZX2.Chunk[0].PokeyByte,x
+   171 23B9 D6 A7			dec ZPZX2.Chunk[0].ByteCount,x
+   172 23BB D0 28			bne ProcessNextIteration
+   173 23BD 16 A6			asl ZPZX2.Chunk[0].BitByte,x		;* Carry Set -> Copy From New Offset, Carry Clear -> Copy From Literal
+   174 23BF B0 07			bcs CopyFromNewOffset
+   175 23C1 F6 A8			inc ZPZX2.Chunk[0].StatusCode,x		; Set state to Copy From Literal
+   176 23C3 20 5C 23			jsr GetElias
+   177 23C6 90 1D			bcc ProcessNextIteration		; Unconditional
+   178 					
+   179 				//-------------------------------------------//
+   180
+   181 23C8			CopyFromNewOffset:
+   182 23C8 A1 A2			lda (ZPZX2.Chunk[0].BufferFrom,x)
+   183 23CA F6 A2 D0 02 F6 A3		inw ZPZX2.Chunk[0].BufferFrom,x
+   184 23D0 95 A5			sta ZPZX2.Chunk[0].LastOffset,x
+   185 23D2 C9 FF			cmp #$FF				; $FF == End of File
+   186 23D4 D0 04			bne SetNewOffset
+   187 23D6 85 8F			sta ZPZX2.SongUpdate			; End of File was reached if Equal
+   188 23D8 F0 0B			beq ProcessNextIteration		; Unconditional
+   189 					
+   190 				//-------------------------------------------//
+   191
+   192 23DA			SetNewOffset:
+   193 23DA 20 5C 23			jsr GetElias
+   194 23DD F6 A7			inc ZPZX2.Chunk[0].ByteCount,x		; Add 1 to the byte count for every new offset
+   195 					
+   196 23DF			SetLastOffset:
+   197 23DF B5 A5			lda ZPZX2.Chunk[0].LastOffset,x
+   198 23E1 65 82			adc ZPZX2.ChannelOffset			; Carry guaranteed to be Clear
+   199 23E3 95 A4			sta ZPZX2.Chunk[0].BufferOffset,x
+   200 					
+   201 				//-------------------------------------------//
+   202
+   203 23E5			ProcessNextIteration:
+   204 23E5 E6 84			inc ZPZX2.BufferTo+1
+   205 23E7 8A CB 0A			txa:sbx #.len ZX2Chunk
+   206 23EA 10 A0			bpl DecompressZX2Continue
+   207 23EC 60				rts					;* Guaranteed to Return with 0 in the Accumulator, Carry Clear and Negative Set
+   208 					
+   209 				//-------------------------------------------//
+   210
+   471 02E0-02E1> 22 20			run Start
+   472 					
+   473 				;* ----------------------------------------------------------------------------
+   474
+   475 				;* ZX2-Chunk data and lookup tables
+   476
+   477 23ED				org ZX2DATA
+   478 3000				icl "SongIndex.asm"
+Source: SongIndex.asm
+     1 				;* Compressed ZX2 data chunks used for streaming POKEY register values at regular intervals
+     2 				;* Chunks will make use of a few ByteCodes for Detecting Loops and Indexing data cleanly
+     3 				;* This format is Work in Progress, and the specs are likely to change often due to that!
+     4
+     5 				;* ----------------------------------------------------------------------------
+     6
+     7 3000			.enum SEQCMD
+     8 = 0000				CHUNK	= %00000000
+     9 = 0080				GOTO	= %10000000
+    10 = 00C0				REPEAT	= %11000000
+    11 				.ende
+    12
+    13 				.macro SetCommand Command, Parameter
+    14 					.byte [:Command | :Parameter]
+    15 				.endm
+    16
+    17 				.macro AddSeq Chunk
+    18 					SetCommand SEQCMD.CHUNK, (:Chunk & 127)
+    19 				.endm
+    20
+    21 				.macro GotoSeq Offset
+    22 					SetCommand SEQCMD.GOTO, ((* - :Offset) & 63)
+    23 				.endm
+    24
+    25 				.macro RepeatSeq Count
+    26 					SetCommand SEQCMD.REPEAT, ((:Count - 1) & 63)
+    27 				.endm
+    28
+    29 				.macro EndSeq
+    30 				;	GotoSeq *
+    31 				.endm
+    32
+    33 				.macro MakeSeq
+    34 					.def ?ArgNum = :0
+    35 					
+    36 					.if (?ArgNum > 256)
+    37 						.error "[MakeSeq] Too many arguments"
+    38 					.endif
     39 					
-    40 				//-------------------------------------------//
-    41
-    42 1027			CopyFromLastOffset:
-    43 1027 A1 A6			lda (ZPZX2.BufferOffset,x)
-    44 1029 F6 A6			inc ZPZX2.BufferOffset,x
-    45 				;	jsr WriteByteTo
-    46 102B 81 94			sta (ZPZX2.BufferTo,x)
-    47 102D 9D ED 10			sta SDWPOK0,x
-    48 1030 F6 94			inc ZPZX2.BufferTo,x
-    49 1032 D6 B9			dec ZPZX2.ByteCount,x
-    50 1034 D0 2C			bne ProcessNextIteration
-    51 1036 16 CB			asl ZPZX2.BitByte,x
-    52 1038 B0 07			bcs CopyFromNewOffset		;* Carry Set -> Copy From New Offset, Carry Not Set -> Copy From Literal
-    53 103A 20 96 10			jsr GetElias
-    54 103D A9 01			lda #$01			; Set state to Copy From Literal
-    55 103F 90 1F			bcc SetNewState			; Unconditional
-    56 					
-    57 				//-------------------------------------------//
-    58 					
-    59 1041			CopyFromNewOffset:
-    60 				;	jsr GetByteFrom
-    61 1041 A1 82			lda (ZPZX2.BufferFrom,x)
-    62 1043 F6 82			inc ZPZX2.BufferFrom,x
-    63 1045 D0 02			bne CopyFromNewOffset_a
-    64 1047 F6 83			inc ZPZX2.BufferFrom+1,x
-    65 1049			CopyFromNewOffset_a:
-    66 1049 95 B8			sta ZPZX2.LastOffset,x
-    67 104B 69 00			adc #0
-    68 104D F0 11			beq SetNewState			; End of File was reached
-    69 104F 20 96 10			jsr GetElias
-    70 1052 F6 B9			inc ZPZX2.ByteCount,x		; Add 1 to the byte count for every new offset
-    71 					
-    72 				//-------------------------------------------//
-    73
-    74 1054			SetBufferOffset:
-    75 1054 B5 94			lda ZPZX2.BufferTo,x
-    76 1056 F5 B8			sbc ZPZX2.LastOffset,x
-    77 1058 95 A6			sta ZPZX2.BufferOffset,x
-    78 105A B5 95			lda ZPZX2.BufferTo+1,x
-    79 105C 95 A7			sta ZPZX2.BufferOffset+1,x
-    80 105E A9 FF			lda #$FF			; Set state to Copy From Last Offset
-    81 					
-    82 				//-------------------------------------------//
-    83
-    84 1060			SetNewState:
-    85 1060 95 CA			sta ZPZX2.StatusCode,x
-    86 1062			ProcessNextIteration:
-    87 1062 CA				dex
-    88 1063 CA				dex
-    89 1064 10 9C			bpl DecompressZX2Continue
-    90 1066 60				rts
+    40 					.echo "[MakeSeq] Begin: ", *
+    41 					
+    42 					.def ?MemIndex = 0
+    43 					PutBytes :1 \ PutBytes :2 \ PutBytes :3 \ PutBytes :4 \ PutBytes :5 \ PutBytes :6 \ PutBytes :7 \ PutBytes :8
+    44 					PutBytes :9 \ PutBytes :10 \ PutBytes :11 \ PutBytes :12 \ PutBytes :13 \ PutBytes :14 \ PutBytes :15 \ PutBytes :16
+    45 					PutBytes :17 \ PutBytes :18 \ PutBytes :19 \ PutBytes :20 \ PutBytes :21 \ PutBytes :22 \ PutBytes :23 \ PutBytes :24
+    46 					PutBytes :25 \ PutBytes :26 \ PutBytes :27 \ PutBytes :28 \ PutBytes :29 \ PutBytes :30 \ PutBytes :31 \ PutBytes :32
+    47 					.def ?MemIndex = 0
+    48 					
+    49 					.rept 256
+    50 						.if (?MemIndex < ?ArgNum)
+    51 							GetBytes ?ArgVal
+    52 							
+    53 							.if (?ArgVal == SEQCMD.REPEAT)
+    54 								GetBytes ?ArgVal \ RepeatSeq ?ArgVal
+    55 								.echo "[MakeSeq] Repeat: ", ?ArgVal
+    56 							.elseif (?ArgVal == SEQCMD.GOTO)
+    57 								GetBytes ?ArgVal \ GotoSeq ?ArgVal
+    58 								.echo "[MakeSeq] Goto: ", ?ArgVal
+    59 							.elseif (?ArgVal < 128)
+    60 								AddSeq ?ArgVal
+    61 								.echo "[MakeSeq] Chunk: ", ?ArgVal
+    62 							.else
+    63 								.echo "[MakeSeq] Warning: Invalid value ", ?ArgVal, " skipped"
+    64 							.endif
+    65 						.endif
+    66 					.endr
+    67 					
+    68 					.echo "[MakeSeq] End: ", *
+    69 				.endm
+    70
+    71 				;* Store Data as 32-bit Integer
+    72 				.macro PutBytes Data
+    73 					.def ?MemOffset = (?MemIndex * 4)
+    74 					.put [?MemOffset + 0] = [:Data & $FF]
+    75 					.put [?MemOffset + 1] = [(:Data >> 8) & $FF]
+    76 					.put [?MemOffset + 2] = [(:Data >> 16) & $FF]
+    77 					.put [?MemOffset + 3] = [(:Data >> 24) & $FF]
+    78 					.def ?MemIndex += 1
+    79 				.endm
+    80
+    81 				;* Read Data as 32-bit Integer
+    82 				.macro GetBytes Data
+    83 					.def ?MemOffset = (?MemIndex * 4)
+    84 					.def :Data = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+    85 					.def ?MemIndex += 1
+    86 				.endm
+    87
+    88 				;* ----------------------------------------------------------------------------
+    89
+    90 				;* ZX2Chunk format
     91
-    92 				//-------------------------------------------//
-    93
-    94 1067			DecompressZX2Reset:
-    95 1067 94 B8			sty ZPZX2.LastOffset,x		; Guaranteed to be 0 from StatusCode
-    96 1069 C8				iny
-    97 106A 94 CA			sty ZPZX2.StatusCode,x		; Set state to Copy From Literal
-    98 106C 94 B9			sty ZPZX2.ByteCount,x		; Initialise ByteCount to 1
-    99 106E			DecompressZX2Reset_a:
-   100 106E BD 59 11			lda ChunkSection,x		; Get the Channel's array of Chunks address
-   101 1071 85 80			sta ZPZX2.TMP0
-   102 1073 BD 5A 11			lda ChunkSection+1,x
-   103 1076 85 81			sta ZPZX2.TMP1
-   104 1078 B4 DC			ldy ZPZX2.ChunkIndex,x		; Get the Chunk Section offset
-   105 107A			DecompressZX2Reset_b:
-   106 107A B1 80			lda (ZPZX2.TMP0),y
-   107 107C C8				iny
-   108 107D C9 FF			cmp #$FF			; Is it the end of the Chunk Sequence?
-   109 107F D0 05			bne DecompressZX2Reset_c	; If not, process ahead like normal
-   110 1081 B1 80			lda (ZPZX2.TMP0),y		; The next byte in the sequence will be used as a Loop Point
-   111 1083 A8				tay
-   112 1084 B0 F4			bcs DecompressZX2Reset_b	; Unconditional
-   113 1086			DecompressZX2Reset_c:
-   114 1086 94 DC			sty ZPZX2.ChunkIndex,x		; Increment the Chunk Section offset for the next time
-   115 1088 A8				tay
-   116 1089 B9 35 11			lda ChunkIndexLSB,y		; Copy the Chunk address into BufferFrom to fully initialise it to load data from that Chunk
-   117 108C 95 82			sta ZPZX2.BufferFrom,x
-   118 108E B9 47 11			lda ChunkIndexMSB,y
-   119 1091 95 83			sta ZPZX2.BufferFrom+1,x
-   120 1093			DecompressZX2Reset_d:
-   121 1093 38				sec				; Initial Bit is needed for GetElias
-   122 1094 B0 0C			bcs GetEliasSkip		; Unconditional
-   123
-   124 				//-------------------------------------------//
-   125
-   126 1096			GetElias:
-   127 1096 F6 B9			inc ZPZX2.ByteCount,x		; Guaranteed to be 0
-   128 1098 D0 04			bne GetEliasLoop_a
-   129 109A			GetEliasLoop:
-   130 109A 16 CB			asl ZPZX2.BitByte,x
-   131 109C 36 B9			rol ZPZX2.ByteCount,x
-   132 109E			GetEliasLoop_a:
-   133 109E 16 CB			asl ZPZX2.BitByte,x
-   134 10A0 D0 0B			bne GetEliasLoop_c
-   135 10A2			GetEliasSkip:
-   136 				;	jsr GetByteFrom
-   137 10A2 A1 82			lda (ZPZX2.BufferFrom,x)
-   138 10A4 F6 82			inc ZPZX2.BufferFrom,x
-   139 10A6 D0 02			bne GetEliasLoop_b
-   140 10A8 F6 83			inc ZPZX2.BufferFrom+1,x
-   141 10AA			GetEliasLoop_b:
-   142 10AA 2A				rol @
-   143 10AB 95 CB			sta ZPZX2.BitByte,x
-   144 10AD			GetEliasLoop_c:	
-   145 10AD B0 EB			bcs GetEliasLoop
-   146 10AF			GetEliasDone:
-   147 10AF 60				rts
-   148
-   149 				//-------------------------------------------//
-   150
-   151 				/*
-   152 				GetByteFrom:
-   153 					lda (ZPZX2.BufferFrom,x)
-   154 					inc ZPZX2.BufferFrom,x
-   155 					bne GetByteFromDone
-   156 					inc ZPZX2.BufferFrom+1,x
-   157 				GetByteFromDone:
-   158 					rts
-   159 				*/
-   159
-   160
-   161 				//-------------------------------------------//
-   162
-   163 				/*
-   164 				WriteByteTo:
-   165 					sta (ZPZX2.BufferTo,x)
-   166 					sta SDWPOK0,x
-   167 					inc ZPZX2.BufferTo,x
-   168 					dec ZPZX2.ByteCount,x
-   169 				WriteByteToDone:
-   170 					rts
-   171 				*/
-   171
-   172
-   173 				//-------------------------------------------//
-   174
-    52
-    53 				;* ----------------------------------------------------------------------------
-    54
-    55 				;* Set POKEY registers at least once per VBI using the last buffered values
-    56
-    57 10B0			SetPokey
-    58 10B0 AD FF 10			lda POKSKC0 
-    59 10B3 8D 0F D2			sta $D20F 
-    60 10B6 AC FD 10			ldy POKCTL0
-    61 10B9 AD ED 10			lda POKF0
-    62 10BC AE EF 10			ldx POKC0
-    63 10BF 8D 00 D2			sta $D200
-    64 10C2 8E 01 D2			stx $D201
-    65 10C5 AD F1 10			lda POKF1
-    66 10C8 AE F3 10			ldx POKC1
-    67 10CB 8D 02 D2			sta $D202
-    68 10CE 8E 03 D2			stx $D203
-    69 10D1 AD F5 10			lda POKF2
-    70 10D4 AE F7 10			ldx POKC2
-    71 10D7 8D 04 D2			sta $D204
-    72 10DA 8E 05 D2			stx $D205
-    73 10DD AD F9 10			lda POKF3
-    74 10E0 AE FB 10			ldx POKC3
-    75 10E3 8D 06 D2			sta $D206
-    76 10E6 8E 07 D2			stx $D207
-    77 10E9 8C 08 D2			sty $D208
-    78 10EC 60				rts
-    79
-    80 				;* Left and Right POKEY buffer
-    81
-    82 10ED			SDWPOK0
-    83 = 10EE			SDWPOK1 = SDWPOK0+1
-    84 10ED 00 00		POKF0	.byte $00, $00
-    85 10EF 00 00		POKC0	.byte $00, $00
-    86 10F1 00 00		POKF1	.byte $00, $00
-    87 10F3 00 00		POKC1	.byte $00, $00
-    88 10F5 00 00		POKF2	.byte $00, $00
-    89 10F7 00 00		POKC2	.byte $00, $00
-    90 10F9 00 00		POKF3	.byte $00, $00
-    91 10FB 00 00		POKC3	.byte $00, $00
-    92 10FD 00 00		POKCTL0	.byte $00, $00
-    93 10FF 03 03		POKSKC0 .byte $03, $03
-    94
-    95 				;* ----------------------------------------------------------------------------
-    96
-    97 				;* Main program will start executing from here, and will loop infinitely
-    98
-    99 1101			Start:
-   100 1101 A2 6D			ldx #.len ZPZX2-1
-   101 1103 A0 00			ldy #0
-   102 1105			Clear:
-   103 1105 94 80			sty ZPZX2,x
-   104 1107 CA				dex
-   105 1108 10 FB			bpl Clear
-   106 110A A2 10			ldx #8*2
-   107 110C			Initialise:
-   108 110C 8A				txa
-   109 110D 4A				lsr @
-   110 110E 69 07			adc #>ZX2BUF
-   111 1110 95 95			sta ZPZX2.BufferTo+1,x
-   112 1112 94 94			sty ZPZX2.BufferTo,x
-   113 1114 CA				dex
-   114 1115 CA				dex
-   115 1116 10 F4			bpl Initialise
+    92 3000			SongIndex:
+    93 				;	.byte TUNE_DEF
+    94 3000-369E> 00			.byte 0
+    95 3001			SongCount:
+    96 				;	.byte ?SNG_Count
+    97 3001 01				.byte [(SongTableEnd - SongTable) / 2]
+    98 3002			RasterbarToggle:
+    99 				;	.byte RASTERBAR_TOGGLE
+   100 3002 00				.byte 0
+   101 3003			RasterbarColour:
+   102 				;	.byte RASTERBAR_COLOUR
+   103 3003 69				.byte $69
+   104 					
+   105 3004			SongTable:
+   106 3004 06 30			.word SNG_06
+   107 3006			SongTableEnd:
+   108
+   109 3006			SNG_06:
+   110
+   111 				;SongRegion:
+   112 3006 01				.byte 1
+   113 					
+   114 				;SongSpeed:
+   115 3007 00				.byte 0
    116 					
-   117 				/*
-   118 				Loop:
-   119 				;	lda #0
-   120 				;	sta COLPF0
-   121 				;	sta COLPF1
-   122 				;	sta COLPF2
-   123 				;	sta COLPF3
-   124 				;	sta COLBK
-   125 				Loop0:
-   126 					lda VCOUNT
-   127 					bne Loop0
-   128 				;	sta WSYNC
-   129 				;	lda #$69
-   130 					lda POKF0
-   131 					sta COLPF2
-   132 				;	lda POKCTL0
-   133 					sta COLBK
-   134 					jsr SetPokey
-   135 					jsr DecompressZX2
-   136 					lda #0
-   137 					sta COLPF2
-   138 					sta COLBK
-   139 				;	sta WSYNC
-   140 				Loop1:
-   141 					lda VCOUNT
-   142 					cmp #16*1	;+1
-   143 					bcc Loop1
-   144 				;	sta WSYNC
-   145 				;	lda #$69-1
-   146 					lda POKC0
-   147 					sta COLPF2
-   148 				;	lda POKCTL0
-   149 					sta COLBK
-   150 					jsr SetPokey
-   151 					jsr DecompressZX2
-   152 					lda #0
-   153 					sta COLPF2
-   154 					sta COLBK
-   155 				;	sta WSYNC
-   156 				Loop2:
-   157 					lda VCOUNT
-   158 					cmp #16*2	;+1
-   159 					bcc Loop2
-   160 				;	sta WSYNC
-   161 				;	lda #$69-2
-   162 					lda POKF1
-   163 					sta COLPF2
-   164 				;	lda POKCTL0
-   165 					sta COLBK
-   166 					jsr SetPokey
-   167 					jsr DecompressZX2
-   168 					lda #0
-   169 					sta COLPF2
-   170 					sta COLBK
-   171 				;	sta WSYNC
-   172 				Loop3:
-   173 					lda VCOUNT
-   174 					cmp #16*3	;+1
-   175 					bcc Loop3
-   176 				;	sta WSYNC
-   177 				;	lda #$69-3
-   178 					lda POKC1
-   179 					sta COLPF2
-   180 				;	lda POKCTL0
-   181 					sta COLBK
-   182 					jsr SetPokey
-   183 					jsr DecompressZX2
-   184 					lda #0
-   185 					sta COLPF2
-   186 					sta COLBK
-   187 				;	sta WSYNC
-   188 				Loop4:
-   189 					lda VCOUNT
-   190 					cmp #16*4	;+1
-   191 					bcc Loop4
-   192 				;	sta WSYNC
-   193 				;	lda #$69-4
-   194 					lda POKF2
-   195 					sta COLPF2
-   196 				;	lda POKCTL0
-   197 					sta COLBK
-   198 					jsr SetPokey
-   199 					jsr DecompressZX2
-   200 					lda #0
-   201 					sta COLPF2
-   202 					sta COLBK
-   203 				;	sta WSYNC
-   204 				Loop5:
-   205 					lda VCOUNT
-   206 					cmp #16*5	;+1
-   207 					bcc Loop5
-   208 				;	sta WSYNC
-   209 				;	lda #$69-5
-   210 					lda POKC2
-   211 					sta COLPF2
-   212 				;	lda POKCTL0
-   213 					sta COLBK
-   214 					jsr SetPokey
-   215 					jsr DecompressZX2
-   216 					lda #0
-   217 					sta COLPF2
-   218 					sta COLBK
-   219 				;	sta WSYNC
-   220 				Loop6:
-   221 					lda VCOUNT
-   222 					cmp #16*6	;+1
-   223 					bcc Loop6
-   224 				;	sta WSYNC
-   225 				;	lda #$69-6
-   226 					lda POKF3
-   227 					sta COLPF2
-   228 				;	lda POKCTL0
-   229 					sta COLBK
-   230 					jsr SetPokey
-   231 					jsr DecompressZX2
-   232 					lda #0
-   233 					sta COLPF2
-   234 					sta COLBK
-   235 				;	sta WSYNC
-   236 				Loop7:
-   237 					lda VCOUNT
-   238 					cmp #16*7	;+1
-   239 					bcc Loop7
-   240 				;	sta WSYNC
-   241 				;	lda #$69-7
-   242 					lda POKC3
-   243 					sta COLPF2
-   244 				;	lda POKCTL0
-   245 					sta COLBK
-   246 					jsr SetPokey
-   247 					jsr DecompressZX2
-   248 					lda #0
-   249 					sta COLPF2
-   250 					sta COLBK
-   251 				;	sta WSYNC
-   252 					jmp Loop
-   253 					run Start
-   254 				*/
-   254
-   255
-   256 1118			Loop:
-   257 1118 AD 0B D4			lda VCOUNT
-   258 111B D0 FB			bne Loop
-   259 111D A9 69			lda #$69
-   260 111F 8D 18 D0			sta COLPF2
-   261 1122 8D 1A D0			sta COLBK
-   262 1125 20 B0 10			jsr SetPokey
-   263 1128 20 00 10			jsr DecompressZX2
-   264 112B A9 00			lda #0
-   265 112D 8D 18 D0			sta COLPF2
-   266 1130 8D 1A D0			sta COLBK
-   267 1133 F0 E3			beq Loop
-   268 02E0-02E1> 01 11			run Start
-   269
-   270 				;* ----------------------------------------------------------------------------
-   271
-   272 				;* Compressed ZX2 data chunks used for streaming POKEY register values at regular intervals
-   273 				;* Chunks will make use of a few ByteCodes for Detecting Loops and Indexing data cleanly
-   274 				;* If the ChunkSection table holds a value of $80 and higher, be used as a Loop Point within itself
-   275 				;* Otherwise, it will be an offset to the ChunkIndex table, where up to 127 values may be used
-   276 				;* This effectively allows using Chunks of different sizes, assuming that all channels are synced
-   277
-   278 				/*
-   279 				ChunkIndexLSB:
-   280 					.byte <Chunk_0_00, <Chunk_0_04, <Chunk_0_08, <Chunk_0_18, <Chunk_1_00, <Chunk_1_04, <Chunk_1_08, <Chunk_1_18, <Chunk_2_00, <Chunk_2_04, <Chunk_2_08, <Chunk_2_09, <Chunk_2_18, <Chunk_2_19, <Chunk_3_04, <Chunk_3_08, <Chunk_3_18, <Chunk_4_00, <Chunk_4_18, <Chunk_6_00, <Chunk_6_01, <Chunk_6_18, <Chunk_7_10, <Chunk_8_00, <Chunk_8_04, <Chunk_8_08, <Chunk_8_18
-   281 				ChunkIndexMSB:
-   282 					.byte >Chunk_0_00, >Chunk_0_04, >Chunk_0_08, >Chunk_0_18, >Chunk_1_00, >Chunk_1_04, >Chunk_1_08, >Chunk_1_18, >Chunk_2_00, >Chunk_2_04, >Chunk_2_08, >Chunk_2_09, >Chunk_2_18, >Chunk_2_19, >Chunk_3_04, >Chunk_3_08, >Chunk_3_18, >Chunk_4_00, >Chunk_4_18, >Chunk_6_00, >Chunk_6_01, >Chunk_6_18, >Chunk_7_10, >Chunk_8_00, >Chunk_8_04, >Chunk_8_08, >Chunk_8_18
-   283 				ChunkSection:
-   284 					.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-   285 				Section_0:
-   286 					.byte $00, $00, $00, $00, $01, $01, $01, $01, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $01, $01, $02, $02, $02, $02, $03, $03, $03, $03, $03, $03, $03, $03
-   287 					GOTOCHUNK 8
-   288 				Section_1:
-   289 					.byte $04, $04, $04, $04, $05, $05, $05, $05, $06, $06, $06, $06, $06, $06, $06, $06, $05, $05, $05, $05, $06, $06, $06, $06, $07, $07, $07, $07, $07, $07, $07, $07
-   290 					GOTOCHUNK 4
-   291 				Section_2:
-   292 					.byte $08, $08, $08, $08, $09, $09, $09, $09, $0A, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $09, $09, $09, $09, $0B, $0B, $0B, $0B, $0C, $0D, $0D, $0D, $0D, $0D, $0D, $0D
-   293 					GOTOCHUNK 12
-   294 				Section_3:
-   295 					.byte $08, $08, $08, $08, $0E, $0E, $0E, $0E, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0E, $0E, $0E, $0E, $0F, $0F, $0F, $0F, $10, $10, $10, $10, $10, $10, $10, $10
-   296 					GOTOCHUNK 4
-   297 				Section_4:
-   298 					.byte $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $12, $12, $12, $12, $12, $12, $12, $12
-   299 					GOTOCHUNK 8
-   300 				Section_5:
-   301 					.byte $08	;, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08
-   302 					GOTOCHUNK 0
-   303 				Section_6:
-   304 					.byte $13, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $15, $15, $15, $15, $15, $15, $15, $15
-   305 					GOTOCHUNK 12
-   306 				Section_7:
-   307 					.byte $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16
-   308 					GOTOCHUNK 8
-   309 				Section_8:
-   310 					.byte $17, $17, $17, $17, $18, $18, $18, $18, $19, $19, $19, $19, $19, $19, $19, $19, $18, $18, $18, $18, $19, $19, $19, $19, $1A, $1A, $1A, $1A, $1A, $1A, $1A, $1A
-   311 					GOTOCHUNK 4
-   312 				Chunk_0_00:
-   313 					ins "/chunks/Sketch 44.0_00"
-   314 				Chunk_0_04:
-   315 					ins "/chunks/Sketch 44.0_04"
-   316 				Chunk_0_08:
-   317 					ins "/chunks/Sketch 44.0_08"
-   318 				Chunk_0_18:
-   319 					ins "/chunks/Sketch 44.0_18"
-   320 				Chunk_1_00:
-   321 					ins "/chunks/Sketch 44.1_00"
-   322 				Chunk_1_04:
-   323 					ins "/chunks/Sketch 44.1_04"
-   324 				Chunk_1_08:
-   325 					ins "/chunks/Sketch 44.1_08"
-   326 				Chunk_1_18:
-   327 					ins "/chunks/Sketch 44.1_18"
-   328 				Chunk_2_00:
-   329 					ins "/chunks/Sketch 44.2_00"
-   330 				Chunk_2_04:
-   331 					ins "/chunks/Sketch 44.2_04"
-   332 				Chunk_2_08:
-   333 					ins "/chunks/Sketch 44.2_08"
-   334 				Chunk_2_09:
-   335 					ins "/chunks/Sketch 44.2_09"
-   336 				Chunk_2_18:
-   337 					ins "/chunks/Sketch 44.2_18"
-   338 				Chunk_2_19:
-   339 					ins "/chunks/Sketch 44.2_19"
-   340 				Chunk_3_04:
-   341 					ins "/chunks/Sketch 44.3_04"
-   342 				Chunk_3_08:
-   343 					ins "/chunks/Sketch 44.3_08"
-   344 				Chunk_3_18:
-   345 					ins "/chunks/Sketch 44.3_18"
-   346 				Chunk_4_00:
-   347 					ins "/chunks/Sketch 44.4_00"
-   348 				Chunk_4_18:
-   349 					ins "/chunks/Sketch 44.4_18"
-   350 				Chunk_6_00:
-   351 					ins "/chunks/Sketch 44.6_00"
-   352 				Chunk_6_01:
-   353 					ins "/chunks/Sketch 44.6_01"
-   354 				Chunk_6_18:
-   355 					ins "/chunks/Sketch 44.6_18"
-   356 				Chunk_7_10:
-   357 					ins "/chunks/Sketch 44.7_10"
-   358 				Chunk_8_00:
-   359 					ins "/chunks/Sketch 44.8_00"
-   360 				Chunk_8_04:
-   361 					ins "/chunks/Sketch 44.8_04"
-   362 				Chunk_8_08:
-   363 					ins "/chunks/Sketch 44.8_08"
-   364 				Chunk_8_18:
-   365 					ins "/chunks/Sketch 44.8_18"
-   366 				*/
-   366
-   367
-   368 				/*
-   369 				ChunkIndexLSB:
-   370 					.byte <Chunk_0_00, <Chunk_0_01, <Chunk_0_02, <Chunk_0_03, <Chunk_0_04, <Chunk_0_05, <Chunk_0_06, <Chunk_1_00, <Chunk_1_01, <Chunk_1_02, <Chunk_1_03, <Chunk_1_04, <Chunk_1_05, <Chunk_1_06, <Chunk_2_00, <Chunk_2_01, <Chunk_2_02, <Chunk_2_03, <Chunk_2_04, <Chunk_2_05, <Chunk_2_06, <Chunk_3_00, <Chunk_3_01, <Chunk_3_02, <Chunk_3_03, <Chunk_3_05, <Chunk_4_00, <Chunk_4_01, <Chunk_4_05, <Chunk_4_06, <Chunk_5_00, <Chunk_5_01, <Chunk_5_05, <Chunk_5_06, <Chunk_6_00, <Chunk_6_01, <Chunk_6_02, <Chunk_6_03, <Chunk_6_04, <Chunk_6_05, <Chunk_7_00, <Chunk_7_01, <Chunk_7_02, <Chunk_7_03, <Chunk_7_04, <Chunk_7_05, <Chunk_8_00, <Chunk_8_01, <Chunk_8_02, <Chunk_8_03, <Chunk_8_04, <Chunk_8_05, <Chunk_8_06
-   371 				ChunkIndexMSB:
-   372 					.byte >Chunk_0_00, >Chunk_0_01, >Chunk_0_02, >Chunk_0_03, >Chunk_0_04, >Chunk_0_05, >Chunk_0_06, >Chunk_1_00, >Chunk_1_01, >Chunk_1_02, >Chunk_1_03, >Chunk_1_04, >Chunk_1_05, >Chunk_1_06, >Chunk_2_00, >Chunk_2_01, >Chunk_2_02, >Chunk_2_03, >Chunk_2_04, >Chunk_2_05, >Chunk_2_06, >Chunk_3_00, >Chunk_3_01, >Chunk_3_02, >Chunk_3_03, >Chunk_3_05, >Chunk_4_00, >Chunk_4_01, >Chunk_4_05, >Chunk_4_06, >Chunk_5_00, >Chunk_5_01, >Chunk_5_05, >Chunk_5_06, >Chunk_6_00, >Chunk_6_01, >Chunk_6_02, >Chunk_6_03, >Chunk_6_04, >Chunk_6_05, >Chunk_7_00, >Chunk_7_01, >Chunk_7_02, >Chunk_7_03, >Chunk_7_04, >Chunk_7_05, >Chunk_8_00, >Chunk_8_01, >Chunk_8_02, >Chunk_8_03, >Chunk_8_04, >Chunk_8_05, >Chunk_8_06
-   373 				ChunkSection:
-   374 					.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-   375 				Section_0:
-   376 					.byte $00, $01, $02, $03, $04, $05, $06
-   377 					GOTOCHUNK 1
-   378 				Section_1:
-   379 					.byte $07, $08, $09, $0A, $0B, $0C, $0D
-   380 					GOTOCHUNK 1
-   381 				Section_2:
-   382 					.byte $0E, $0F, $10, $11, $12, $13, $14
-   383 					GOTOCHUNK 1
-   384 				Section_3:
-   385 					.byte $15, $16, $17, $18, $18, $19, $19
-   386 					GOTOCHUNK 1
-   387 				Section_4:
-   388 					.byte $1A, $1B, $1B, $1B, $1B, $1C, $1D
-   389 					GOTOCHUNK 1
-   390 				Section_5:
-   391 					.byte $1E, $1F, $1F, $1F, $1F, $20, $21
-   392 					GOTOCHUNK 1
-   393 				Section_6:
-   394 					.byte $22, $23, $24, $25, $26, $27, $27
-   395 					GOTOCHUNK 1
-   396 				Section_7:
-   397 					.byte $28, $29, $2A, $2B, $2C, $2D, $2D
-   398 					GOTOCHUNK 1
-   399 				Section_8:
-   400 					.byte $2E, $2F, $30, $31, $32, $33, $34
-   401 					GOTOCHUNK 1
-   402 				Chunk_0_00:
-   403 					ins "/chunks/Flourishing Falls.0_00"
-   404 				Chunk_0_01:
-   405 					ins "/chunks/Flourishing Falls.0_01"
-   406 				Chunk_0_02:
-   407 					ins "/chunks/Flourishing Falls.0_02"
-   408 				Chunk_0_03:
-   409 					ins "/chunks/Flourishing Falls.0_03"
-   410 				Chunk_0_04:
-   411 					ins "/chunks/Flourishing Falls.0_04"
-   412 				Chunk_0_05:
-   413 					ins "/chunks/Flourishing Falls.0_05"
-   414 				Chunk_0_06:
-   415 					ins "/chunks/Flourishing Falls.0_06"
-   416 				Chunk_1_00:
-   417 					ins "/chunks/Flourishing Falls.1_00"
-   418 				Chunk_1_01:
-   419 					ins "/chunks/Flourishing Falls.1_01"
-   420 				Chunk_1_02:
-   421 					ins "/chunks/Flourishing Falls.1_02"
-   422 				Chunk_1_03:
-   423 					ins "/chunks/Flourishing Falls.1_03"
-   424 				Chunk_1_04:
-   425 					ins "/chunks/Flourishing Falls.1_04"
-   426 				Chunk_1_05:
-   427 					ins "/chunks/Flourishing Falls.1_05"
-   428 				Chunk_1_06:
-   429 					ins "/chunks/Flourishing Falls.1_06"
-   430 				Chunk_2_00:
-   431 					ins "/chunks/Flourishing Falls.2_00"
-   432 				Chunk_2_01:
-   433 					ins "/chunks/Flourishing Falls.2_01"
-   434 				Chunk_2_02:
-   435 					ins "/chunks/Flourishing Falls.2_02"
-   436 				Chunk_2_03:
-   437 					ins "/chunks/Flourishing Falls.2_03"
-   438 				Chunk_2_04:
-   439 					ins "/chunks/Flourishing Falls.2_04"
-   440 				Chunk_2_05:
-   441 					ins "/chunks/Flourishing Falls.2_05"
-   442 				Chunk_2_06:
-   443 					ins "/chunks/Flourishing Falls.2_06"
-   444 				Chunk_3_00:
-   445 					ins "/chunks/Flourishing Falls.3_00"
-   446 				Chunk_3_01:
-   447 					ins "/chunks/Flourishing Falls.3_01"
-   448 				Chunk_3_02:
-   449 					ins "/chunks/Flourishing Falls.3_02"
-   450 				Chunk_3_03:
-   451 					ins "/chunks/Flourishing Falls.3_03"
-   452 				Chunk_3_05:
-   453 					ins "/chunks/Flourishing Falls.3_05"
-   454 				Chunk_4_00:
-   455 					ins "/chunks/Flourishing Falls.4_00"
-   456 				Chunk_4_01:
-   457 					ins "/chunks/Flourishing Falls.4_01"
-   458 				Chunk_4_05:
-   459 					ins "/chunks/Flourishing Falls.4_05"
-   460 				Chunk_4_06:
-   461 					ins "/chunks/Flourishing Falls.4_06"
-   462 				Chunk_5_00:
-   463 					ins "/chunks/Flourishing Falls.5_00"
-   464 				Chunk_5_01:
-   465 					ins "/chunks/Flourishing Falls.5_01"
-   466 				Chunk_5_05:
-   467 					ins "/chunks/Flourishing Falls.5_05"
-   468 				Chunk_5_06:
-   469 					ins "/chunks/Flourishing Falls.5_06"
-   470 				Chunk_6_00:
-   471 					ins "/chunks/Flourishing Falls.6_00"
-   472 				Chunk_6_01:
-   473 					ins "/chunks/Flourishing Falls.6_01"
-   474 				Chunk_6_02:
-   475 					ins "/chunks/Flourishing Falls.6_02"
-   476 				Chunk_6_03:
-   477 					ins "/chunks/Flourishing Falls.6_03"
-   478 				Chunk_6_04:
-   479 					ins "/chunks/Flourishing Falls.6_04"
-   480 				Chunk_6_05:
-   481 					ins "/chunks/Flourishing Falls.6_05"
-   482 				Chunk_7_00:
-   483 					ins "/chunks/Flourishing Falls.7_00"
-   484 				Chunk_7_01:
-   485 					ins "/chunks/Flourishing Falls.7_01"
-   486 				Chunk_7_02:
-   487 					ins "/chunks/Flourishing Falls.7_02"
-   488 				Chunk_7_03:
-   489 					ins "/chunks/Flourishing Falls.7_03"
-   490 				Chunk_7_04:
-   491 					ins "/chunks/Flourishing Falls.7_04"
-   492 				Chunk_7_05:
-   493 					ins "/chunks/Flourishing Falls.7_05"
-   494 				Chunk_8_00:
-   495 					ins "/chunks/Flourishing Falls.8_00"
-   496 				Chunk_8_01:
-   497 					ins "/chunks/Flourishing Falls.8_01"
-   498 				Chunk_8_02:
-   499 					ins "/chunks/Flourishing Falls.8_02"
-   500 				Chunk_8_03:
-   501 					ins "/chunks/Flourishing Falls.8_03"
-   502 				Chunk_8_04:
-   503 					ins "/chunks/Flourishing Falls.8_04"
-   504 				Chunk_8_05:
-   505 					ins "/chunks/Flourishing Falls.8_05"
-   506 				Chunk_8_06:
-   507 					ins "/chunks/Flourishing Falls.8_06"
-   508 				*/
-   508
-   509
-   510 				/*
-   511 				ChunkIndexLSB:
-   512 					.byte <Chunk_0_00, <Chunk_1_00, <Chunk_2_00, <Chunk_3_00, <Chunk_4_00, <Chunk_5_00, <Chunk_6_00, <Chunk_7_00, <Chunk_8_00
-   513 				ChunkIndexMSB:
-   514 					.byte >Chunk_0_00, >Chunk_1_00, >Chunk_2_00, >Chunk_3_00, >Chunk_4_00, >Chunk_5_00, >Chunk_6_00, >Chunk_7_00, >Chunk_8_00
-   515 				ChunkSection:
-   516 					.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-   517 				Section_0:
-   518 					.byte $00
-   519 					GOTOCHUNK 0
-   520 				Section_1:
-   521 					.byte $01
-   522 					GOTOCHUNK 0
-   523 				Section_2:
-   524 					.byte $02
-   525 					GOTOCHUNK 0
-   526 				Section_3:
-   527 					.byte $03
-   528 					GOTOCHUNK 0
-   529 				Section_4:
-   530 					.byte $04
-   531 					GOTOCHUNK 0
-   532 				Section_5:
-   533 					.byte $05
-   534 					GOTOCHUNK 0
-   535 				Section_6:
-   536 					.byte $06
-   537 					GOTOCHUNK 0
-   538 				Section_7:
-   539 					.byte $07
-   540 					GOTOCHUNK 0
-   541 				Section_8:
-   542 					.byte $08
-   543 					GOTOCHUNK 0
-   544 				Chunk_0_00:
-   545 					ins "/chunks/stranded on io.0_00"
-   546 				Chunk_1_00:
-   547 					ins "/chunks/stranded on io.1_00"
-   548 				Chunk_2_00:
-   549 					ins "/chunks/stranded on io.2_00"
-   550 				Chunk_3_00:
-   551 					ins "/chunks/stranded on io.3_00"
-   552 				Chunk_4_00:
-   553 					ins "/chunks/stranded on io.4_00"
-   554 				Chunk_5_00:
-   555 					ins "/chunks/stranded on io.5_00"
-   556 				Chunk_6_00:
-   557 					ins "/chunks/stranded on io.6_00"
-   558 				Chunk_7_00:
-   559 					ins "/chunks/stranded on io.7_00"
-   560 				Chunk_8_00:
-   561 					ins "/chunks/stranded on io.8_00"
-   562 				*/
-   562
-   563
-   564 1135			ChunkIndexLSB:
-   565 1135-1F89> 8F 4F 8E C7 + 	.byte <Chunk_0_00, <Chunk_1_00, <Chunk_2_00, <Chunk_3_00, <Chunk_4_00, <Chunk_5_00, <Chunk_6_00, <Chunk_7_00, <Chunk_8_00
-   566 113E B1 31 D0 C4 7F 51 + 	.byte <Chunk_9_00, <Chunk_A_00, <Chunk_B_00, <Chunk_C_00, <Chunk_D_00, <Chunk_E_00, <Chunk_F_00, <Chunk_G_00, <Chunk_H_00
-   567 1147			ChunkIndexMSB:
-   568 1147 11 12 12 12 13 13 + 	.byte >Chunk_0_00, >Chunk_1_00, >Chunk_2_00, >Chunk_3_00, >Chunk_4_00, >Chunk_5_00, >Chunk_6_00, >Chunk_7_00, >Chunk_8_00
-   569 1150 14 18 19 1A 1B 1C + 	.byte >Chunk_9_00, >Chunk_A_00, >Chunk_B_00, >Chunk_C_00, >Chunk_D_00, >Chunk_E_00, >Chunk_F_00, >Chunk_G_00, >Chunk_H_00
-   570 1159			ChunkSection:
-   571 1159 6B 11 6F 11 73 11 + 	.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-   572 116B			Section_0:
-   573 116B 00 09			.byte $00, $09
-   574 116D				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 116D FF 01			.byte $FF, 1
-Source: decompress.asm
-   575 116F			Section_1:
-   576 116F 01 0A			.byte $01, $0A
-   577 1171				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1171 FF 01			.byte $FF, 1
-Source: decompress.asm
-   578 1173			Section_2:
-   579 1173 02 0B			.byte $02, $0B
-   580 1175				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1175 FF 01			.byte $FF, 1
-Source: decompress.asm
-   581 1177			Section_3:
-   582 1177 03 0C			.byte $03, $0C
-   583 1179				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1179 FF 01			.byte $FF, 1
-Source: decompress.asm
-   584 117B			Section_4:
-   585 117B 04 0D			.byte $04, $0D
-   586 117D				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 117D FF 01			.byte $FF, 1
-Source: decompress.asm
-   587 117F			Section_5:
-   588 117F 05 0E			.byte $05, $0E
-   589 1181				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1181 FF 01			.byte $FF, 1
-Source: decompress.asm
-   590 1183			Section_6:
-   591 1183 06 0F			.byte $06, $0F
-   592 1185				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1185 FF 01			.byte $FF, 1
-Source: decompress.asm
-   593 1187			Section_7:
-   594 1187 07 10			.byte $07, $10
-   595 1189				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 1189 FF 01			.byte $FF, 1
-Source: decompress.asm
-   596 118B			Section_8:
-   597 118B 08 11			.byte $08, $11
-   598 118D				GOTOCHUNK 1
-Macro: GOTOCHUNK [Source: decompress.asm]
-     2 118D FF 01			.byte $FF, 1
-Source: decompress.asm
-   599 118F			Chunk_0_00:
-   600 118F CB 00 62 63 DF 0D + 	ins "/chunks/io intro.0_00"
-   601 124F			Chunk_1_00:
-   602 124F CA 01 23 22 0E 21 + 	ins "/chunks/io intro.1_00"
-   603 128E			Chunk_2_00:
-   604 128E 2A 00 AF 7F 00 FE + 	ins "/chunks/io intro.2_00"
-   605 12C7			Chunk_3_00:
-   606 12C7 3F 00 FF 7F FE FF + 	ins "/chunks/io intro.3_00"
-   607 1310			Chunk_4_00:
-   608 1310 3A 00 AB 7F 00 FE + 	ins "/chunks/io intro.4_00"
-   609 13B4			Chunk_5_00:
-   610 13B4 3A 00 AB 7F 00 FE + 	ins "/chunks/io intro.5_00"
-   611 13F6			Chunk_6_00:
-   612 13F6 2A 00 AF 7F 00 FE + 	ins "/chunks/io intro.6_00"
-   613 1429			Chunk_7_00:
-   614 1429 3F 00 FF 7F FE FF + 	ins "/chunks/io intro.7_00"
-   615 1485			Chunk_8_00:
-   616 1485 3F 41 FF 7F FE FF + 	ins "/chunks/io intro.8_00"
-   617 14B1			Chunk_9_00:
-   618 14B1 CA 00 62 63 32 00 + 	ins "/chunks/io loop.0_00"
-   619 1831			Chunk_A_00:
-   620 1831 CA 01 23 22 22 00 + 	ins "/chunks/io loop.1_00"
-   621 19D0			Chunk_B_00:
-   622 19D0 CB 00 6F DF CB 27 + 	ins "/chunks/io loop.2_00"
-   623 1AC4			Chunk_C_00:
-   624 1AC4 80 81 A2 A1 B8 80 + 	ins "/chunks/io loop.3_00"
-   625 1B7F			Chunk_D_00:
-   626 1B7F CB 05 4F 00 D6 0D + 	ins "/chunks/io loop.4_00"
-   627 1C51			Chunk_E_00:
-   628 1C51 CB 06 A2 00 DF 0D + 	ins "/chunks/io loop.5_00"
-   629 1D1C			Chunk_F_00:
-   630 1D1C B2 00 32 55 75 85 + 	ins "/chunks/io loop.6_00"
-   631 1E14			Chunk_G_00:
-   632 1E14 A8 8F AF AA A7 A5 + 	ins "/chunks/io loop.7_00"
-   633 1EED			Chunk_H_00:
-   634 1EED 3B 61 0E 63 DF 1B + 	ins "/chunks/io loop.8_00"
-   635
+   117 				;SongAdjust:
+   118 3008 80				.byte %10000000
+   119 					
+   120 				;SongStereo:
+   121 3009 00				.byte 0
+   122 					
+   123 				;SongTimer:
+   124 300A 00 00 00 00			.byte 0, 0, 0, 0
+   125 					
+   126 				;SongSection:
+   127 300E 44 30 4E 30 57 30 + 	.word SNG_06_0, SNG_06_1, SNG_06_2, SNG_06_3, SNG_06_4, SNG_06_5, SNG_06_6, SNG_06_7, SNG_06_8
+   128 					;* Add another 2*9 Bytes for Stereo Songs, if defined as such
+   129 					
+   130 				;ChunkSection:
+   131 3020 84 36 96 30 FC 30 + 	.word Nowhere_8_04, Nowhere_0_01, Nowhere_0_06, Nowhere_0_07, Nowhere_1_00, Nowhere_1_01, Nowhere_1_06, Nowhere_2_00
+   132 3030 31 34 4E 34 6E 34 + 	.word Nowhere_3_00, Nowhere_4_02, Nowhere_4_04, Nowhere_5_02, Nowhere_5_04, Nowhere_6_03, Nowhere_6_05, Nowhere_7_03
+   133 3040 30 36 70 36			.word Nowhere_7_05, Nowhere_8_02
+   134 					
+   135 3044			SNG_06_0:
+   136 					MakeSeq \
+   137 						SEQCMD.REPEAT 1, $04 \
+   138 						SEQCMD.REPEAT 3, $01
+   138 3044				MAKESEQ 		SEQCMD.REPEAT 1, $04 		SEQCMD.REPEAT 3, $01
+Macro: MAKESEQ [Source: SongIndex.asm]
+     1 = 0006				.def ?ArgNum = 6
+     7 					.echo "[MakeSeq] Begin: ", *
+     7 				[MakeSeq] Begin: $3044
+     9 = 0000				.def ?MemIndex = 0
+    10 					PutBytes SEQCMD.REPEAT \ PutBytes 1 \ PutBytes $04 \ PutBytes SEQCMD.REPEAT \ PutBytes 3 \ PutBytes $01 \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0000				.def ?MemOffset = (?MemIndex * 4)
+     2  [0000] C0			.put [?MemOffset + 0] = [SEQCMD.REPEAT & $FF]
+     3  [0001] 00			.put [?MemOffset + 1] = [(SEQCMD.REPEAT >> 8) & $FF]
+     4  [0002] 00			.put [?MemOffset + 2] = [(SEQCMD.REPEAT >> 16) & $FF]
+     5  [0003] 00			.put [?MemOffset + 3] = [(SEQCMD.REPEAT >> 24) & $FF]
+     6 = 0001				.def ?MemIndex += 1
+     1 = 0004				.def ?MemOffset = (?MemIndex * 4)
+     2  [0004] 01			.put [?MemOffset + 0] = [1 & $FF]
+     3  [0005] 00			.put [?MemOffset + 1] = [(1 >> 8) & $FF]
+     4  [0006] 00			.put [?MemOffset + 2] = [(1 >> 16) & $FF]
+     5  [0007] 00			.put [?MemOffset + 3] = [(1 >> 24) & $FF]
+     6 = 0002				.def ?MemIndex += 1
+     1 = 0008				.def ?MemOffset = (?MemIndex * 4)
+     2  [0008] 04			.put [?MemOffset + 0] = [$04 & $FF]
+     3  [0009] 00			.put [?MemOffset + 1] = [($04 >> 8) & $FF]
+     4  [000A] 00			.put [?MemOffset + 2] = [($04 >> 16) & $FF]
+     5  [000B] 00			.put [?MemOffset + 3] = [($04 >> 24) & $FF]
+     6 = 0003				.def ?MemIndex += 1
+     1 = 000C				.def ?MemOffset = (?MemIndex * 4)
+     2  [000C] C0			.put [?MemOffset + 0] = [SEQCMD.REPEAT & $FF]
+     3  [000D] 00			.put [?MemOffset + 1] = [(SEQCMD.REPEAT >> 8) & $FF]
+     4  [000E] 00			.put [?MemOffset + 2] = [(SEQCMD.REPEAT >> 16) & $FF]
+     5  [000F] 00			.put [?MemOffset + 3] = [(SEQCMD.REPEAT >> 24) & $FF]
+     6 = 0004				.def ?MemIndex += 1
+     1 = 0010				.def ?MemOffset = (?MemIndex * 4)
+     2  [0010] 03			.put [?MemOffset + 0] = [3 & $FF]
+     3  [0011] 00			.put [?MemOffset + 1] = [(3 >> 8) & $FF]
+     4  [0012] 00			.put [?MemOffset + 2] = [(3 >> 16) & $FF]
+     5  [0013] 00			.put [?MemOffset + 3] = [(3 >> 24) & $FF]
+     6 = 0005				.def ?MemIndex += 1
+     1 = 0014				.def ?MemOffset = (?MemIndex * 4)
+     2  [0014] 01			.put [?MemOffset + 0] = [$01 & $FF]
+     3  [0015] 00			.put [?MemOffset + 1] = [($01 >> 8) & $FF]
+     4  [0016] 00			.put [?MemOffset + 2] = [($01 >> 16) & $FF]
+     5  [0017] 00			.put [?MemOffset + 3] = [($01 >> 24) & $FF]
+     6 = 0006				.def ?MemIndex += 1
+     1 = 0018				.def ?MemOffset = (?MemIndex * 4)
+     2  [0018] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0019] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [001A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [001B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0007				.def ?MemIndex += 1
+     1 = 001C				.def ?MemOffset = (?MemIndex * 4)
+     2  [001C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [001D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [001E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [001F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0008				.def ?MemIndex += 1
+Source: SongIndex.asm
+    11 					PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0020				.def ?MemOffset = (?MemIndex * 4)
+     2  [0020] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0021] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0022] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0023] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0009				.def ?MemIndex += 1
+     1 = 0024				.def ?MemOffset = (?MemIndex * 4)
+     2  [0024] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0025] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0026] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0027] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000A				.def ?MemIndex += 1
+     1 = 0028				.def ?MemOffset = (?MemIndex * 4)
+     2  [0028] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0029] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [002A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [002B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000B				.def ?MemIndex += 1
+     1 = 002C				.def ?MemOffset = (?MemIndex * 4)
+     2  [002C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [002D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [002E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [002F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000C				.def ?MemIndex += 1
+     1 = 0030				.def ?MemOffset = (?MemIndex * 4)
+     2  [0030] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0031] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0032] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0033] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000D				.def ?MemIndex += 1
+     1 = 0034				.def ?MemOffset = (?MemIndex * 4)
+     2  [0034] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0035] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0036] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0037] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000E				.def ?MemIndex += 1
+     1 = 0038				.def ?MemOffset = (?MemIndex * 4)
+     2  [0038] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0039] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [003A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [003B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000F				.def ?MemIndex += 1
+     1 = 003C				.def ?MemOffset = (?MemIndex * 4)
+     2  [003C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [003D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [003E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [003F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0010				.def ?MemIndex += 1
+Source: SongIndex.asm
+    12 					PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0040				.def ?MemOffset = (?MemIndex * 4)
+     2  [0040] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0041] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0042] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0043] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0011				.def ?MemIndex += 1
+     1 = 0044				.def ?MemOffset = (?MemIndex * 4)
+     2  [0044] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0045] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0046] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0047] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0012				.def ?MemIndex += 1
+     1 = 0048				.def ?MemOffset = (?MemIndex * 4)
+     2  [0048] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0049] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [004A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [004B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0013				.def ?MemIndex += 1
+     1 = 004C				.def ?MemOffset = (?MemIndex * 4)
+     2  [004C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [004D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [004E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [004F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0014				.def ?MemIndex += 1
+     1 = 0050				.def ?MemOffset = (?MemIndex * 4)
+     2  [0050] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0051] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0052] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0053] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0015				.def ?MemIndex += 1
+     1 = 0054				.def ?MemOffset = (?MemIndex * 4)
+     2  [0054] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0055] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0056] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0057] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0016				.def ?MemIndex += 1
+     1 = 0058				.def ?MemOffset = (?MemIndex * 4)
+     2  [0058] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0059] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [005A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [005B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0017				.def ?MemIndex += 1
+     1 = 005C				.def ?MemOffset = (?MemIndex * 4)
+     2  [005C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [005D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [005E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [005F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0018				.def ?MemIndex += 1
+Source: SongIndex.asm
+    13 					PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0060				.def ?MemOffset = (?MemIndex * 4)
+     2  [0060] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0061] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0062] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0063] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0019				.def ?MemIndex += 1
+     1 = 0064				.def ?MemOffset = (?MemIndex * 4)
+     2  [0064] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0065] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0066] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0067] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001A				.def ?MemIndex += 1
+     1 = 0068				.def ?MemOffset = (?MemIndex * 4)
+     2  [0068] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0069] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [006A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [006B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001B				.def ?MemIndex += 1
+     1 = 006C				.def ?MemOffset = (?MemIndex * 4)
+     2  [006C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [006D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [006E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [006F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001C				.def ?MemIndex += 1
+     1 = 0070				.def ?MemOffset = (?MemIndex * 4)
+     2  [0070] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0071] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0072] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0073] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001D				.def ?MemIndex += 1
+     1 = 0074				.def ?MemOffset = (?MemIndex * 4)
+     2  [0074] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0075] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0076] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0077] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001E				.def ?MemIndex += 1
+     1 = 0078				.def ?MemOffset = (?MemIndex * 4)
+     2  [0078] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0079] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [007A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [007B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001F				.def ?MemIndex += 1
+     1 = 007C				.def ?MemOffset = (?MemIndex * 4)
+     2  [007C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [007D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [007E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [007F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0020				.def ?MemIndex += 1
+Source: SongIndex.asm
+    14 = 0000				.def ?MemIndex = 0
+     1 = 0000				.def ?MemOffset = (?MemIndex * 4)
+     2 = 00C0				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0001				.def ?MemIndex += 1
+     1 = 0004				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0001				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0002				.def ?MemIndex += 1
+     1 3044 C0				.byte [SEQCMD.REPEAT | ((?ARGVAL - 1) & 63)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Repeat: ", ?ARGVAL
+    17 				[MakeSeq] Repeat: $0001
+     1 = 0008				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0004				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0003				.def ?MemIndex += 1
+     1 3045 04				.byte [SEQCMD.CHUNK | (?ARGVAL & 127)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Chunk: ", ?ARGVAL
+    17 				[MakeSeq] Chunk: $0004
+     1 = 000C				.def ?MemOffset = (?MemIndex * 4)
+     2 = 00C0				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0004				.def ?MemIndex += 1
+     1 = 0010				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0003				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0005				.def ?MemIndex += 1
+     1 3046 C2				.byte [SEQCMD.REPEAT | ((?ARGVAL - 1) & 63)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Repeat: ", ?ARGVAL
+    17 				[MakeSeq] Repeat: $0003
+     1 = 0014				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0001				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0006				.def ?MemIndex += 1
+     1 3047 01				.byte [SEQCMD.CHUNK | (?ARGVAL & 127)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Chunk: ", ?ARGVAL
+    17 				[MakeSeq] Chunk: $0001
+    35 					.echo "[MakeSeq] End: ", *
+    35 				[MakeSeq] End: $3048
+Source: SongIndex.asm
+   139 3048				EndSeq
+Macro: ENDSEQ [Source: SongIndex.asm]
+Source: SongIndex.asm
+   140 					
+   141 3048			SNG_06_0_Loop:
+   142 					MakeSeq \
+   143 						SEQCMD.REPEAT, 2, $01 \
+   144 						SEQCMD.REPEAT 1, $02, $03 \
+   145 						SEQCMD.GOTO SNG_06_0_Loop
+   145 3048				MAKESEQ 		SEQCMD.REPEAT, 2, $01 		SEQCMD.REPEAT 1, $02, $03 		SEQCMD.GOTO SNG_06_0_Loop
+Macro: MAKESEQ [Source: SongIndex.asm]
+     1 = 0009				.def ?ArgNum = 9
+     7 					.echo "[MakeSeq] Begin: ", *
+     7 				[MakeSeq] Begin: $3048
+     9 = 0000				.def ?MemIndex = 0
+    10 					PutBytes SEQCMD.REPEAT \ PutBytes 2 \ PutBytes $01 \ PutBytes SEQCMD.REPEAT \ PutBytes 1 \ PutBytes $02 \ PutBytes $03 \ PutBytes SEQCMD.GOTO
+     1 = 0000				.def ?MemOffset = (?MemIndex * 4)
+     2  [0000] C0			.put [?MemOffset + 0] = [SEQCMD.REPEAT & $FF]
+     3  [0001] 00			.put [?MemOffset + 1] = [(SEQCMD.REPEAT >> 8) & $FF]
+     4  [0002] 00			.put [?MemOffset + 2] = [(SEQCMD.REPEAT >> 16) & $FF]
+     5  [0003] 00			.put [?MemOffset + 3] = [(SEQCMD.REPEAT >> 24) & $FF]
+     6 = 0001				.def ?MemIndex += 1
+     1 = 0004				.def ?MemOffset = (?MemIndex * 4)
+     2  [0004] 02			.put [?MemOffset + 0] = [2 & $FF]
+     3  [0005] 00			.put [?MemOffset + 1] = [(2 >> 8) & $FF]
+     4  [0006] 00			.put [?MemOffset + 2] = [(2 >> 16) & $FF]
+     5  [0007] 00			.put [?MemOffset + 3] = [(2 >> 24) & $FF]
+     6 = 0002				.def ?MemIndex += 1
+     1 = 0008				.def ?MemOffset = (?MemIndex * 4)
+     2  [0008] 01			.put [?MemOffset + 0] = [$01 & $FF]
+     3  [0009] 00			.put [?MemOffset + 1] = [($01 >> 8) & $FF]
+     4  [000A] 00			.put [?MemOffset + 2] = [($01 >> 16) & $FF]
+     5  [000B] 00			.put [?MemOffset + 3] = [($01 >> 24) & $FF]
+     6 = 0003				.def ?MemIndex += 1
+     1 = 000C				.def ?MemOffset = (?MemIndex * 4)
+     2  [000C] C0			.put [?MemOffset + 0] = [SEQCMD.REPEAT & $FF]
+     3  [000D] 00			.put [?MemOffset + 1] = [(SEQCMD.REPEAT >> 8) & $FF]
+     4  [000E] 00			.put [?MemOffset + 2] = [(SEQCMD.REPEAT >> 16) & $FF]
+     5  [000F] 00			.put [?MemOffset + 3] = [(SEQCMD.REPEAT >> 24) & $FF]
+     6 = 0004				.def ?MemIndex += 1
+     1 = 0010				.def ?MemOffset = (?MemIndex * 4)
+     2  [0010] 01			.put [?MemOffset + 0] = [1 & $FF]
+     3  [0011] 00			.put [?MemOffset + 1] = [(1 >> 8) & $FF]
+     4  [0012] 00			.put [?MemOffset + 2] = [(1 >> 16) & $FF]
+     5  [0013] 00			.put [?MemOffset + 3] = [(1 >> 24) & $FF]
+     6 = 0005				.def ?MemIndex += 1
+     1 = 0014				.def ?MemOffset = (?MemIndex * 4)
+     2  [0014] 02			.put [?MemOffset + 0] = [$02 & $FF]
+     3  [0015] 00			.put [?MemOffset + 1] = [($02 >> 8) & $FF]
+     4  [0016] 00			.put [?MemOffset + 2] = [($02 >> 16) & $FF]
+     5  [0017] 00			.put [?MemOffset + 3] = [($02 >> 24) & $FF]
+     6 = 0006				.def ?MemIndex += 1
+     1 = 0018				.def ?MemOffset = (?MemIndex * 4)
+     2  [0018] 03			.put [?MemOffset + 0] = [$03 & $FF]
+     3  [0019] 00			.put [?MemOffset + 1] = [($03 >> 8) & $FF]
+     4  [001A] 00			.put [?MemOffset + 2] = [($03 >> 16) & $FF]
+     5  [001B] 00			.put [?MemOffset + 3] = [($03 >> 24) & $FF]
+     6 = 0007				.def ?MemIndex += 1
+     1 = 001C				.def ?MemOffset = (?MemIndex * 4)
+     2  [001C] 80			.put [?MemOffset + 0] = [SEQCMD.GOTO & $FF]
+     3  [001D] 00			.put [?MemOffset + 1] = [(SEQCMD.GOTO >> 8) & $FF]
+     4  [001E] 00			.put [?MemOffset + 2] = [(SEQCMD.GOTO >> 16) & $FF]
+     5  [001F] 00			.put [?MemOffset + 3] = [(SEQCMD.GOTO >> 24) & $FF]
+     6 = 0008				.def ?MemIndex += 1
+Source: SongIndex.asm
+    11 					PutBytes SNG_06_0_LOOP \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0020				.def ?MemOffset = (?MemIndex * 4)
+     2  [0020] 48			.put [?MemOffset + 0] = [SNG_06_0_LOOP & $FF]
+     3  [0021] 30			.put [?MemOffset + 1] = [(SNG_06_0_LOOP >> 8) & $FF]
+     4  [0022] 00			.put [?MemOffset + 2] = [(SNG_06_0_LOOP >> 16) & $FF]
+     5  [0023] 00			.put [?MemOffset + 3] = [(SNG_06_0_LOOP >> 24) & $FF]
+     6 = 0009				.def ?MemIndex += 1
+     1 = 0024				.def ?MemOffset = (?MemIndex * 4)
+     2  [0024] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0025] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0026] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0027] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000A				.def ?MemIndex += 1
+     1 = 0028				.def ?MemOffset = (?MemIndex * 4)
+     2  [0028] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0029] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [002A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [002B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000B				.def ?MemIndex += 1
+     1 = 002C				.def ?MemOffset = (?MemIndex * 4)
+     2  [002C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [002D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [002E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [002F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000C				.def ?MemIndex += 1
+     1 = 0030				.def ?MemOffset = (?MemIndex * 4)
+     2  [0030] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0031] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0032] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0033] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000D				.def ?MemIndex += 1
+     1 = 0034				.def ?MemOffset = (?MemIndex * 4)
+     2  [0034] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0035] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0036] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0037] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000E				.def ?MemIndex += 1
+     1 = 0038				.def ?MemOffset = (?MemIndex * 4)
+     2  [0038] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0039] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [003A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [003B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 000F				.def ?MemIndex += 1
+     1 = 003C				.def ?MemOffset = (?MemIndex * 4)
+     2  [003C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [003D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [003E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [003F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0010				.def ?MemIndex += 1
+Source: SongIndex.asm
+    12 					PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0040				.def ?MemOffset = (?MemIndex * 4)
+     2  [0040] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0041] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0042] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0043] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0011				.def ?MemIndex += 1
+     1 = 0044				.def ?MemOffset = (?MemIndex * 4)
+     2  [0044] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0045] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0046] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0047] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0012				.def ?MemIndex += 1
+     1 = 0048				.def ?MemOffset = (?MemIndex * 4)
+     2  [0048] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0049] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [004A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [004B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0013				.def ?MemIndex += 1
+     1 = 004C				.def ?MemOffset = (?MemIndex * 4)
+     2  [004C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [004D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [004E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [004F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0014				.def ?MemIndex += 1
+     1 = 0050				.def ?MemOffset = (?MemIndex * 4)
+     2  [0050] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0051] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0052] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0053] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0015				.def ?MemIndex += 1
+     1 = 0054				.def ?MemOffset = (?MemIndex * 4)
+     2  [0054] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0055] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0056] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0057] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0016				.def ?MemIndex += 1
+     1 = 0058				.def ?MemOffset = (?MemIndex * 4)
+     2  [0058] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0059] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [005A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [005B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0017				.def ?MemIndex += 1
+     1 = 005C				.def ?MemOffset = (?MemIndex * 4)
+     2  [005C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [005D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [005E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [005F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0018				.def ?MemIndex += 1
+Source: SongIndex.asm
+    13 					PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF \ PutBytes $FFFFFFFF
+     1 = 0060				.def ?MemOffset = (?MemIndex * 4)
+     2  [0060] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0061] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0062] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0063] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0019				.def ?MemIndex += 1
+     1 = 0064				.def ?MemOffset = (?MemIndex * 4)
+     2  [0064] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0065] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0066] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0067] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001A				.def ?MemIndex += 1
+     1 = 0068				.def ?MemOffset = (?MemIndex * 4)
+     2  [0068] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0069] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [006A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [006B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001B				.def ?MemIndex += 1
+     1 = 006C				.def ?MemOffset = (?MemIndex * 4)
+     2  [006C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [006D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [006E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [006F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001C				.def ?MemIndex += 1
+     1 = 0070				.def ?MemOffset = (?MemIndex * 4)
+     2  [0070] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0071] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0072] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0073] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001D				.def ?MemIndex += 1
+     1 = 0074				.def ?MemOffset = (?MemIndex * 4)
+     2  [0074] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0075] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [0076] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [0077] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001E				.def ?MemIndex += 1
+     1 = 0078				.def ?MemOffset = (?MemIndex * 4)
+     2  [0078] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [0079] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [007A] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [007B] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 001F				.def ?MemIndex += 1
+     1 = 007C				.def ?MemOffset = (?MemIndex * 4)
+     2  [007C] FF			.put [?MemOffset + 0] = [$FFFFFFFF & $FF]
+     3  [007D] FF			.put [?MemOffset + 1] = [($FFFFFFFF >> 8) & $FF]
+     4  [007E] FF			.put [?MemOffset + 2] = [($FFFFFFFF >> 16) & $FF]
+     5  [007F] FF			.put [?MemOffset + 3] = [($FFFFFFFF >> 24) & $FF]
+     6 = 0020				.def ?MemIndex += 1
+Source: SongIndex.asm
+    14 = 0000				.def ?MemIndex = 0
+     1 = 0000				.def ?MemOffset = (?MemIndex * 4)
+     2 = 00C0				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0001				.def ?MemIndex += 1
+     1 = 0004				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0002				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0002				.def ?MemIndex += 1
+     1 3048 C1				.byte [SEQCMD.REPEAT | ((?ARGVAL - 1) & 63)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Repeat: ", ?ARGVAL
+    17 				[MakeSeq] Repeat: $0002
+     1 = 0008				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0001				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0003				.def ?MemIndex += 1
+     1 3049 01				.byte [SEQCMD.CHUNK | (?ARGVAL & 127)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Chunk: ", ?ARGVAL
+    17 				[MakeSeq] Chunk: $0001
+     1 = 000C				.def ?MemOffset = (?MemIndex * 4)
+     2 = 00C0				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0004				.def ?MemIndex += 1
+     1 = 0010				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0001				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0005				.def ?MemIndex += 1
+     1 304A C0				.byte [SEQCMD.REPEAT | ((?ARGVAL - 1) & 63)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Repeat: ", ?ARGVAL
+    17 				[MakeSeq] Repeat: $0001
+     1 = 0014				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0002				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0006				.def ?MemIndex += 1
+     1 304B 02				.byte [SEQCMD.CHUNK | (?ARGVAL & 127)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Chunk: ", ?ARGVAL
+    17 				[MakeSeq] Chunk: $0002
+     1 = 0018				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0003				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0007				.def ?MemIndex += 1
+     1 304C 03				.byte [SEQCMD.CHUNK | (?ARGVAL & 127)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Chunk: ", ?ARGVAL
+    17 				[MakeSeq] Chunk: $0003
+     1 = 001C				.def ?MemOffset = (?MemIndex * 4)
+     2 = 0080				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0008				.def ?MemIndex += 1
+     1 = 0020				.def ?MemOffset = (?MemIndex * 4)
+     2 = 3048				.def ?ARGVAL = [[.get [?MemOffset + 0] & $FF] | [.get [?MemOffset + 1] << 8] | [.get [?MemOffset + 2] << 16] | [.get [?MemOffset + 3] << 24]]
+     3 = 0009				.def ?MemIndex += 1
+     1 304D 85				.byte [SEQCMD.GOTO | ((* - ?ARGVAL) & 63)]
+Source: SongIndex.asm
+    17 								.ECHO "[MakeSeq] Goto: ", ?ARGVAL
+    17 				[MakeSeq] Goto: $3048
+    35 					.echo "[MakeSeq] End: ", *
+    35 				[MakeSeq] End: $304E
+Source: SongIndex.asm
+   146 304E				EndSeq
+Macro: ENDSEQ [Source: SongIndex.asm]
+Source: SongIndex.asm
+   147 					
+   148 304E			SNG_06_1:
+   149 304E 04 05 05 05			.byte $04, $05, $05, $05
+   150 3052			SNG_06_1_Loop:
+   151 3052 05 05 06 06			.byte $05, $05, $06, $06
+   152 3056				GotoSeq SNG_06_1_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 3056 84				.byte [SEQCMD.GOTO | ((* - SNG_06_1_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   153 					
+   154 3057			SNG_06_2:
+   155 3057 07 07 07 07			.byte $07, $07, $07, $07
+   156 305B			SNG_06_2_Loop:
+   157 305B 07 07 07 07			.byte $07, $07, $07, $07
+   158 305F				GotoSeq SNG_06_2_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 305F 84				.byte [SEQCMD.GOTO | ((* - SNG_06_2_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   159 					
+   160 3060			SNG_06_3:
+   161 3060 08 08 08 08			.byte $08, $08, $08, $08
+   162 3064			SNG_06_3_Loop:
+   163 3064 08 08 08 08			.byte $08, $08, $08, $08
+   164 3068				GotoSeq SNG_06_3_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 3068 84				.byte [SEQCMD.GOTO | ((* - SNG_06_3_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   165 					
+   166 3069			SNG_06_4:
+   167 3069 04 04 09 09			.byte $04, $04, $09, $09
+   168 306D			SNG_06_4_Loop:
+   169 306D 0A 0A 0A 0A			.byte $0A, $0A, $0A, $0A
+   170 3071				GotoSeq SNG_06_4_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 3071 84				.byte [SEQCMD.GOTO | ((* - SNG_06_4_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   171 					
+   172 3072			SNG_06_5:
+   173 3072 04 04 0B 0B			.byte $04, $04, $0B, $0B
+   174 3076			SNG_06_5_Loop:
+   175 3076 0C 0C 0C 0C			.byte $0C, $0C, $0C, $0C
+   176 307A				GotoSeq SNG_06_5_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 307A 84				.byte [SEQCMD.GOTO | ((* - SNG_06_5_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   177 					
+   178 307B			SNG_06_6:
+   179 307B 04 04 04 0D			.byte $04, $04, $04, $0D
+   180 307F			SNG_06_6_Loop:
+   181 307F 0D 0E 0E 0E			.byte $0D, $0E, $0E, $0E
+   182 3083				GotoSeq SNG_06_6_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 3083 84				.byte [SEQCMD.GOTO | ((* - SNG_06_6_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   183 					
+   184 3084			SNG_06_7:
+   185 3084 04 04 04 0F			.byte $04, $04, $04, $0F
+   186 3088			SNG_06_7_Loop:
+   187 3088 0F 10 10 10			.byte $0F, $10, $10, $10
+   188 308C				GotoSeq SNG_06_7_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 308C 84				.byte [SEQCMD.GOTO | ((* - SNG_06_7_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   189 					
+   190 308D			SNG_06_8:
+   191 308D 04 04 11 11			.byte $04, $04, $11, $11
+   192 3091			SNG_06_8_Loop:
+   193 3091 00 00 00 00			.byte $00, $00, $00 ,$00
+   194 3095				GotoSeq SNG_06_8_Loop
+Macro: GOTOSEQ [Source: SongIndex.asm]
+     1 3095 84				.byte [SEQCMD.GOTO | ((* - SNG_06_8_LOOP) & 63)]
+Source: SongIndex.asm
+Source: SongIndex.asm
+   195
+   196
+   197
+   198 				/*
+   199 				SNG_06_0:
+   200 					.byte $04, $01, $01, $01
+   201 				SNG_06_0_Loop:
+   202 					.byte $01, $01, $02, $03
+   203 					GotoSeq SNG_06_0_Loop
+   204 				SNG_06_1:
+   205 					.byte $04, $05, $05, $05
+   206 				SNG_06_1_Loop:
+   207 					.byte $05, $05, $06, $06
+   208 					GotoSeq SNG_06_1_Loop
+   209 					
+   210 				SNG_06_2:
+   211 					.byte $07, $07, $07, $07
+   212 				SNG_06_2_Loop:
+   213 					.byte $07, $07, $07, $07
+   214 					GotoSeq SNG_06_2_Loop
+   215 				SNG_06_3:
+   216 					.byte $08, $08, $08, $08
+   217 				SNG_06_3_Loop:
+   218 					.byte $08, $08, $08, $08
+   219 					GotoSeq SNG_06_3_Loop
+   220 					
+   221 				SNG_06_4:
+   222 					.byte $04, $04, $09, $09
+   223 				SNG_06_4_Loop:
+   224 					.byte $0A, $0A, $0A, $0A
+   225 					GotoSeq SNG_06_4_Loop
+   226 				SNG_06_5:
+   227 					.byte $04, $04, $0B, $0B
+   228 				SNG_06_5_Loop:
+   229 					.byte $0C, $0C, $0C, $0C
+   230 					GotoSeq SNG_06_5_Loop
+   231 					
+   232 				SNG_06_6:
+   233 					.byte $04, $04, $04, $0D
+   234 				SNG_06_6_Loop:
+   235 					.byte $0D, $0E, $0E, $0E
+   236 					GotoSeq SNG_06_6_Loop
+   237 				SNG_06_7:
+   238 					.byte $04, $04, $04, $0F
+   239 				SNG_06_7_Loop:
+   240 					.byte $0F, $10, $10, $10
+   241 					GotoSeq SNG_06_7_Loop
+   242 					
+   243 				SNG_06_8:
+   244 					.byte $04, $04, $11, $11
+   245 				SNG_06_8_Loop:
+   246 					.byte $00, $00, $00 ,$00
+   247 					GotoSeq SNG_06_8_Loop
+   248 				*/
+   248
+   249 					
+   250 3096 3C 71 3C 6B 3C 65 + Nowhere_0_01: ins "./Nowhere/Nowhere Is Forever v4.0_01"
+   251 30FC 38 6B 38 35 38 50 + Nowhere_0_06: ins "./Nowhere/Nowhere Is Forever v4.0_06"
+   252 322B 38 47 38 23 38 35 + Nowhere_0_07: ins "./Nowhere/Nowhere Is Forever v4.0_07"
+   253 3358 2A 00 EF 7F 00 FE + Nowhere_1_00: ins "./Nowhere/Nowhere Is Forever v4.1_00"
+   254 3369 8E 00 B2 83 B3 E0 + Nowhere_1_01: ins "./Nowhere/Nowhere Is Forever v4.1_01"
+   255 3383 80 00 B4 B3 C8 00 + Nowhere_1_06: ins "./Nowhere/Nowhere Is Forever v4.1_06"
+   256 339E 80 00 4B E3 C8 00 + Nowhere_2_00: ins "./Nowhere/Nowhere Is Forever v4.2_00"
+   257 3431 CC 83 A3 A2 CA A1 + Nowhere_3_00: ins "./Nowhere/Nowhere Is Forever v4.3_00"
+   258 344E 8E 00 B6 F6 1C FB + Nowhere_4_02: ins "./Nowhere/Nowhere Is Forever v4.4_02"
+   259 346E 8E 00 B6 96 0D 00 + Nowhere_4_04: ins "./Nowhere/Nowhere Is Forever v4.4_04"
+   260 352B 80 01 C1 00 C3 C1 + Nowhere_5_02: ins "./Nowhere/Nowhere Is Forever v4.5_02"
+   261 3544 A2 0F CF C8 C6 00 + Nowhere_5_04: ins "./Nowhere/Nowhere Is Forever v4.5_04"
+   262 3595 E0 00 DF EF F8 FF + Nowhere_6_03: ins "./Nowhere/Nowhere Is Forever v4.6_03"
+   263 35C3 E0 00 DF EF F8 FF + Nowhere_6_05: ins "./Nowhere/Nowhere Is Forever v4.6_05"
+   264 35F9 B8 86 AC AA A8 A6 + Nowhere_7_03: ins "./Nowhere/Nowhere Is Forever v4.7_03"
+   265 3630 B8 86 AC AA A8 A6 + Nowhere_7_05: ins "./Nowhere/Nowhere Is Forever v4.7_05"
+   266 3670 8E 20 00 F7 1C BF + Nowhere_8_02: ins "./Nowhere/Nowhere Is Forever v4.8_02"
+   267 3684 8E 20 00 9E 0D 7D + Nowhere_8_04: ins "./Nowhere/Nowhere Is Forever v4.8_04"
+   268
+   479 					.echo "> ZX2DATA size of ", * - ZX2DATA, ", from ", ZX2DATA, " to ", *
+   479 				> ZX2DATA size of $069F, from $3000 to $369F
+   480 					
+   481 				;* ----------------------------------------------------------------------------
+   482

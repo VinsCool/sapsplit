@@ -8,628 +8,475 @@
 
 ;* Few definitions needed for building executable Atari binaries
 
+	opt r-
 	icl "atari.def"
 
-ZPG	= $80
-ZX2BUF	= $700
-DZX2	= ZX2BUF + ($100 * 9)
+ZPG			= $80
+ZX2BUF			= $C000
+DZX2			= $2000		; $0300
+ZX2DATA			= $3000		; DRIVEREND
 
-.MACRO GOTOCHUNK CHUNK
-;	.byte :CHUNK + $80
-	.byte $FF, :CHUNK
-.ENDM
+VLINE			= 11
+VBLANK_SCANLINE		= (248 / 2)
+PAL_SCANLINE		= (312 / 2)
+NTSC_SCANLINE		= (262 / 2)
 
+.struct ZX2Chunk
+	SongSection	.word
+	BufferFrom	.word
+	BufferOffset	.byte
+	LastOffset	.byte
+	BitByte		.byte
+	ByteCount	.byte
+	StatusCode	.byte
+	PokeyByte	.byte
+.ends
 
 ;* ----------------------------------------------------------------------------
 
 ;* Zeropage variables for quick access, also used for Indirect Addressing Mode
 
 	org ZPG
-
-.LOCAL ZPZX2
+	
+.local ZPZX2
 TMP0		.ds 1
 TMP1		.ds 1
-BufferFrom	.ds 2*9
-BufferTo	.ds 2*9
-BufferOffset	.ds 2*9
-ByteLookup	.ds 2*9
-ByteStatus	.ds 2*9
-ByteChunk	.ds 2*9
-LastOffset = ByteLookup
-ByteCount = ByteLookup+1
-StatusCode = ByteStatus
-BitByte = ByteStatus+1
-ChunkIndex = ByteChunk
-Unused = ByteChunk+1
-.ENDL
+
+ChannelOffset	.ds 1
+BufferTo	.ds 2
+PlayerStatus	.ds 1
+LastKeyPressed	.ds 1
+StackPointer	.ds 1
+
+RasterbarColour	.ds 1
+RasterbarToggle	.ds 1
+
+MachineRegion	.ds 1
+MachineStereo	.ds 1
+AdjustSpeed	.ds 1
+
+SongPointer	.ds 2
+SongUpdate	.ds 1
+SongIndex	.ds 1
+SongCount	.ds 1
+SongSpeed	.ds 1
+SongRegion	.ds 1
+SongStereo	.ds 1
+
+SongTimer	.ds 4
+
+SyncStatus	.ds 1
+LastCount	.ds 1
+SyncCount	.ds 1
+SyncOffset	.ds 1
+SyncDelta	.ds 1
+SyncDivision	.ds 1
+PokeySkctl	.ds 1
+
+Chunk dta ZX2Chunk[9-1]
+.endl
+
+TestByte	.ds 1
 
 ;* ----------------------------------------------------------------------------
 
-;* ZX2-based SAP-R playback music driver, with very rudimentary functionalities
+;* Decompression Channel Buffers
 
-	org DZX2
-	icl "dzx2.asm"
-
-;* ----------------------------------------------------------------------------
-
-;* Set POKEY registers at least once per VBI using the last buffered values
-
-SetPokey
-	lda POKSKC0 
-	sta $D20F 
-	ldy POKCTL0
-	lda POKF0
-	ldx POKC0
-	sta $D200
-	stx $D201
-	lda POKF1
-	ldx POKC1
-	sta $D202
-	stx $D203
-	lda POKF2
-	ldx POKC2
-	sta $D204
-	stx $D205
-	lda POKF3
-	ldx POKC3
-	sta $D206
-	stx $D207
-	sty $D208
-	rts
-
-;* Left and Right POKEY buffer
-
-SDWPOK0
-SDWPOK1 = SDWPOK0+1
-POKF0	.byte $00, $00
-POKC0	.byte $00, $00
-POKF1	.byte $00, $00
-POKC1	.byte $00, $00
-POKF2	.byte $00, $00
-POKC2	.byte $00, $00
-POKF3	.byte $00, $00
-POKC3	.byte $00, $00
-POKCTL0	.byte $00, $00
-POKSKC0 .byte $03, $03
+	org ZX2BUF
+	.ds (256 * 9)
 
 ;* ----------------------------------------------------------------------------
 
 ;* Main program will start executing from here, and will loop infinitely
 
-Start:
-	ldx #.len ZPZX2-1
-	ldy #0
-Clear:
-	sty ZPZX2,x
-	dex
-	bpl Clear
-	ldx #8*2
-Initialise:
-	txa
-	lsr @
-	adc #>ZX2BUF
-	sta ZPZX2.BufferTo+1,x
-	sty ZPZX2.BufferTo,x
-	dex
-	dex
-	bpl Initialise
+	org DZX2
 	
-/*
-Loop:
+DList:
+	.byte BLANK8
+	.byte LMS|MODE4
+	.word ZX2BUF
+	:27 .byte MODE4
+	.byte DLIJUMP
+	.word DList
+		
+Start:
+	sei
+	cld
+	mva #%11111110 PORTB
+	mva #%00000000 NMIEN
+	sta IRQEN
+	sta DMACTL
+;	mwa #DZX2 DLISTL
+;	mva >ZX2BUF CHBASE
+;	mva #%00100011 DMACTL
 ;	lda #0
-;	sta COLPF0
-;	sta COLPF1
-;	sta COLPF2
-;	sta COLPF3
-;	sta COLBK
-Loop0:
-	lda VCOUNT
-	bne Loop0
-;	sta WSYNC
-;	lda #$69
-	lda POKF0
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop1:
-	lda VCOUNT
-	cmp #16*1	;+1
-	bcc Loop1
-;	sta WSYNC
-;	lda #$69-1
-	lda POKC0
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop2:
-	lda VCOUNT
-	cmp #16*2	;+1
-	bcc Loop2
-;	sta WSYNC
-;	lda #$69-2
-	lda POKF1
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop3:
-	lda VCOUNT
-	cmp #16*3	;+1
-	bcc Loop3
-;	sta WSYNC
-;	lda #$69-3
-	lda POKC1
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop4:
-	lda VCOUNT
-	cmp #16*4	;+1
-	bcc Loop4
-;	sta WSYNC
-;	lda #$69-4
-	lda POKF2
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop5:
-	lda VCOUNT
-	cmp #16*5	;+1
-	bcc Loop5
-;	sta WSYNC
-;	lda #$69-5
-	lda POKC2
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop6:
-	lda VCOUNT
-	cmp #16*6	;+1
-	bcc Loop6
-;	sta WSYNC
-;	lda #$69-6
-	lda POKF3
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-Loop7:
-	lda VCOUNT
-	cmp #16*7	;+1
-	bcc Loop7
-;	sta WSYNC
-;	lda #$69-7
-	lda POKC3
-	sta COLPF2
-;	lda POKCTL0
-	sta COLBK
-	jsr SetPokey
-	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-;	sta WSYNC
-	jmp Loop
-	run Start
-*/
+	tax
+	
+Clear:
+	sta.w ZPG,x
+	dex
+	bne Clear
+	tsx:stx ZPZX2.StackPointer
+	
+Initialise:
+	jsr ResetPokey
+	jsr WaitForVBlank
+	jsr DetectMachineRegion
+	;jsr DetectMachineStereo
+	ldx #100
+	jsr WaitForSomeTime
+	cli
+	
+Reload:
+	mva ZX2DATA+0 ZPZX2.SongIndex
+	mva ZX2DATA+1 ZPZX2.SongCount
+	mva ZX2DATA+2 ZPZX2.RasterbarToggle
+	mva ZX2DATA+3 ZPZX2.RasterbarColour
+	
+Reinit:
+	jsr SetNewSongPtrsFull
+	jsr SetPlaybackSpeed
+	
+Wait:
+	jsr ResetPokey
+	jsr WaitForVBlank
+	jsr WaitForSync
 
 Loop:
-	lda VCOUNT
-	bne Loop
-	lda #$69
-	sta COLPF2
-	sta COLBK
+	mva #0 COLBK
+	jsr HandleKeyboard
+	bit ZPZX2.PlayerStatus
+	bmi Reinit
+	bvs Wait
+	bit ZPZX2.SongUpdate
+	bpl Continue
+	lda ZPZX2.RasterbarColour
+	clc
+	adc #$10
+	sta ZPZX2.RasterbarColour
+	
+Continue:
+	sta WSYNC
+	jsr WaitForScanline
+	sta WSYNC
+	mva ZPZX2.RasterbarColour COLBK
 	jsr SetPokey
 	jsr DecompressZX2
-	lda #0
-	sta COLPF2
-	sta COLBK
-	beq Loop
-	run Start
+	jsr CheckForTwoToneBit
+	jmp Loop
+	
+Stop:
+	mva #%10000000 ZPZX2.PlayerStatus
+	rts
+	
+Pause:
+	bit ZPZX2.PlayerStatus
+	bmi Play
+	bvs Play
+	mva #%01000000 ZPZX2.PlayerStatus
+	rts
+	
+Play:
+	mva #%00000000 ZPZX2.PlayerStatus
+	rts
+	
+Exit:
+	jsr ResetPokey
+	jsr WaitForVBlank
+	mva #%11000000 NMIEN
+	mva #%11111111 PORTB
+	ldx:txs ZPZX2.StackPointer
+	ldy #1
+	clc
+	rts
+	
+SkipChunk:
+	mva #%11111111 ZPZX2.SongUpdate
+	rts
+		
+SeekNext:
+	lda ZPZX2.SongCount
+	isb ZPZX2.SongIndex
+	beq SeekLoop
+	bcs SeekSet
+	
+SeekPrevious:
+	lda ZPZX2.SongCount
+	dcp ZPZX2.SongIndex
+	bcs SeekSet
+	sbc #0
+	
+SeekLoop:
+	sta ZPZX2.SongIndex
+	
+SeekSet:
+	jsr ResetPokey
+	jsr SetNewSongPtrsFull
+	jsr SetPlaybackSpeed
+	jsr WaitForVBlank
+	jmp WaitForSync
+	
+HandleKeyboard:
+	lda SKSTAT			; Serial Port Status
+	and #%00000100			; Last Key still pressed?
+	beq HandleKeyboardContinue	; If yes, process further below
+	mva #$FF ZPZX2.LastKeyPressed	; Reset Last Key registered
+	bmi HandleKeyboardDone		; Unconditional
+	
+HandleKeyboardContinue:
+	lda KBCODE			; Keyboard Code
+	and #%00111111			; Clear the SHIFT and CTRL bits out of the Key Identifier
+	cmp ZPZX2.LastKeyPressed	; Last Key currently held down?
+	sta ZPZX2.LastKeyPressed	; Update Last Key registered
+	beq HandleKeyboardDone		; If yes, there is nothing else to do here
+	cmp #8				; 'O' Key?
+	beq Stop			; Yes -> Stop Playback and wait for new input
+	cmp #10				; 'P' Key?
+	beq Pause			; Yes -> Toggle Play or Pause and wait for new input
+	cmp #12				; 'Enter' Key?
+	beq SkipChunk			; Yes -> Skip Playback to Next Chunk
+	cmp #28				; Escape Key?
+	beq Exit			; Yes -> Stop Playback and Return to DOS
+	cmp #30				; '2' Key?
+	beq SeekNext			; Yes -> Seek Next Song
+	cmp #31				; '1' Key?
+	beq SeekPrevious		; Yes -> Seek Previous Song
+	cmp #48				; '9' Key?
+	beq SpeedDown			; Yes -> Set Speed Down
+	cmp #50				; '0' Key?
+	beq SpeedUp			; Yes -> Set Speed Up
+	
+HandleKeyboardDone:
+	rts
+	
+SpeedDown:
+	dec ZPZX2.SongSpeed
+	bcs SetSpeed
+SpeedUp:
+	inc ZPZX2.SongSpeed
+	bcs SetSpeed
+SetSpeed:
+	ldx #%00000111
+	lda ZPZX2.SongSpeed
+	sax ZPZX2.SongSpeed
+	jsr ResetPokey
+	jsr SetPlaybackSpeed
+	jsr WaitForVBlank
+	jmp WaitForSync
+	
+;* ----------------------------------------------------------------------------
+	
+;* Set POKEY registers at least once per VBI using the last buffered values
+
+.proc SetPokey
+	ldx #0
+	lda ZPZX2.Chunk[0].PokeyByte,x
+	ldy ZPZX2.Chunk[1].PokeyByte,x
+	sta $D200
+	lda ZPZX2.Chunk[2].PokeyByte,x
+	sty $D201
+	ldy ZPZX2.Chunk[3].PokeyByte,x
+	sta $D202
+	lda ZPZX2.Chunk[4].PokeyByte,x
+	sty $D203
+	ldy ZPZX2.Chunk[5].PokeyByte,x
+	sta $D204
+	lda ZPZX2.Chunk[6].PokeyByte,x
+	sty $D205
+	ldy ZPZX2.Chunk[7].PokeyByte,x
+	sta $D206
+	lda ZPZX2.Chunk[8].PokeyByte,x
+	sty $D207
+	ldy ZPZX2.PokeySkctl,x
+	sta $D208
+	#CYCLE #4
+	sty $D20F
+	rts
+.endp
+	
+;* ----------------------------------------------------------------------------
+
+.proc ResetPokey
+	mva #%00000011 ZPZX2.PokeySkctl	; Default SKCTL value, needed for handling Keyboard
+	lda #0				; Default POKEY values
+	:9 sta ZPZX2.Chunk[#].PokeyByte	; Clear all POKEY values in memory
+	sta WSYNC
+	sta $D20F
+	sta WSYNC
+	sta STIMER
+	jmp SetPokey
+.endp
 
 ;* ----------------------------------------------------------------------------
 
-;* Compressed ZX2 data chunks used for streaming POKEY register values at regular intervals
-;* Chunks will make use of a few ByteCodes for Detecting Loops and Indexing data cleanly
-;* If the ChunkSection table holds a value of $80 and higher, be used as a Loop Point within itself
-;* Otherwise, it will be an offset to the ChunkIndex table, where up to 127 values may be used
-;* This effectively allows using Chunks of different sizes, assuming that all channels are synced
+.proc WaitForSync
+	lda VCOUNT		; Get Current Scanline / 2
+	cmp #VLINE		; Is it time for Sync yet?
+	bne WaitForSync		; Not Equal -> Keep waiting
+	rts
+.endp
 
-/*
-ChunkIndexLSB:
-	.byte <Chunk_0_00, <Chunk_0_04, <Chunk_0_08, <Chunk_0_18, <Chunk_1_00, <Chunk_1_04, <Chunk_1_08, <Chunk_1_18, <Chunk_2_00, <Chunk_2_04, <Chunk_2_08, <Chunk_2_09, <Chunk_2_18, <Chunk_2_19, <Chunk_3_04, <Chunk_3_08, <Chunk_3_18, <Chunk_4_00, <Chunk_4_18, <Chunk_6_00, <Chunk_6_01, <Chunk_6_18, <Chunk_7_10, <Chunk_8_00, <Chunk_8_04, <Chunk_8_08, <Chunk_8_18
-ChunkIndexMSB:
-	.byte >Chunk_0_00, >Chunk_0_04, >Chunk_0_08, >Chunk_0_18, >Chunk_1_00, >Chunk_1_04, >Chunk_1_08, >Chunk_1_18, >Chunk_2_00, >Chunk_2_04, >Chunk_2_08, >Chunk_2_09, >Chunk_2_18, >Chunk_2_19, >Chunk_3_04, >Chunk_3_08, >Chunk_3_18, >Chunk_4_00, >Chunk_4_18, >Chunk_6_00, >Chunk_6_01, >Chunk_6_18, >Chunk_7_10, >Chunk_8_00, >Chunk_8_04, >Chunk_8_08, >Chunk_8_18
-ChunkSection:
-	.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-Section_0:
-	.byte $00, $00, $00, $00, $01, $01, $01, $01, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $01, $01, $02, $02, $02, $02, $03, $03, $03, $03, $03, $03, $03, $03
-	GOTOCHUNK 8
-Section_1:
-	.byte $04, $04, $04, $04, $05, $05, $05, $05, $06, $06, $06, $06, $06, $06, $06, $06, $05, $05, $05, $05, $06, $06, $06, $06, $07, $07, $07, $07, $07, $07, $07, $07
-	GOTOCHUNK 4
-Section_2:
-	.byte $08, $08, $08, $08, $09, $09, $09, $09, $0A, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $09, $09, $09, $09, $0B, $0B, $0B, $0B, $0C, $0D, $0D, $0D, $0D, $0D, $0D, $0D
-	GOTOCHUNK 12
-Section_3:
-	.byte $08, $08, $08, $08, $0E, $0E, $0E, $0E, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0F, $0E, $0E, $0E, $0E, $0F, $0F, $0F, $0F, $10, $10, $10, $10, $10, $10, $10, $10
-	GOTOCHUNK 4
-Section_4:
-	.byte $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $11, $12, $12, $12, $12, $12, $12, $12, $12
-	GOTOCHUNK 8
-Section_5:
-	.byte $08	;, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08
-	GOTOCHUNK 0
-Section_6:
-	.byte $13, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $15, $15, $15, $15, $15, $15, $15, $15
-	GOTOCHUNK 12
-Section_7:
-	.byte $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $08, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16
-	GOTOCHUNK 8
-Section_8:
-	.byte $17, $17, $17, $17, $18, $18, $18, $18, $19, $19, $19, $19, $19, $19, $19, $19, $18, $18, $18, $18, $19, $19, $19, $19, $1A, $1A, $1A, $1A, $1A, $1A, $1A, $1A
-	GOTOCHUNK 4
-Chunk_0_00:
-	ins "/chunks/Sketch 44.0_00"
-Chunk_0_04:
-	ins "/chunks/Sketch 44.0_04"
-Chunk_0_08:
-	ins "/chunks/Sketch 44.0_08"
-Chunk_0_18:
-	ins "/chunks/Sketch 44.0_18"
-Chunk_1_00:
-	ins "/chunks/Sketch 44.1_00"
-Chunk_1_04:
-	ins "/chunks/Sketch 44.1_04"
-Chunk_1_08:
-	ins "/chunks/Sketch 44.1_08"
-Chunk_1_18:
-	ins "/chunks/Sketch 44.1_18"
-Chunk_2_00:
-	ins "/chunks/Sketch 44.2_00"
-Chunk_2_04:
-	ins "/chunks/Sketch 44.2_04"
-Chunk_2_08:
-	ins "/chunks/Sketch 44.2_08"
-Chunk_2_09:
-	ins "/chunks/Sketch 44.2_09"
-Chunk_2_18:
-	ins "/chunks/Sketch 44.2_18"
-Chunk_2_19:
-	ins "/chunks/Sketch 44.2_19"
-Chunk_3_04:
-	ins "/chunks/Sketch 44.3_04"
-Chunk_3_08:
-	ins "/chunks/Sketch 44.3_08"
-Chunk_3_18:
-	ins "/chunks/Sketch 44.3_18"
-Chunk_4_00:
-	ins "/chunks/Sketch 44.4_00"
-Chunk_4_18:
-	ins "/chunks/Sketch 44.4_18"
-Chunk_6_00:
-	ins "/chunks/Sketch 44.6_00"
-Chunk_6_01:
-	ins "/chunks/Sketch 44.6_01"
-Chunk_6_18:
-	ins "/chunks/Sketch 44.6_18"
-Chunk_7_10:
-	ins "/chunks/Sketch 44.7_10"
-Chunk_8_00:
-	ins "/chunks/Sketch 44.8_00"
-Chunk_8_04:
-	ins "/chunks/Sketch 44.8_04"
-Chunk_8_08:
-	ins "/chunks/Sketch 44.8_08"
-Chunk_8_18:
-	ins "/chunks/Sketch 44.8_18"
-*/
+;* ----------------------------------------------------------------------------
 
-/*
-ChunkIndexLSB:
-	.byte <Chunk_0_00, <Chunk_0_01, <Chunk_0_02, <Chunk_0_03, <Chunk_0_04, <Chunk_0_05, <Chunk_0_06, <Chunk_1_00, <Chunk_1_01, <Chunk_1_02, <Chunk_1_03, <Chunk_1_04, <Chunk_1_05, <Chunk_1_06, <Chunk_2_00, <Chunk_2_01, <Chunk_2_02, <Chunk_2_03, <Chunk_2_04, <Chunk_2_05, <Chunk_2_06, <Chunk_3_00, <Chunk_3_01, <Chunk_3_02, <Chunk_3_03, <Chunk_3_05, <Chunk_4_00, <Chunk_4_01, <Chunk_4_05, <Chunk_4_06, <Chunk_5_00, <Chunk_5_01, <Chunk_5_05, <Chunk_5_06, <Chunk_6_00, <Chunk_6_01, <Chunk_6_02, <Chunk_6_03, <Chunk_6_04, <Chunk_6_05, <Chunk_7_00, <Chunk_7_01, <Chunk_7_02, <Chunk_7_03, <Chunk_7_04, <Chunk_7_05, <Chunk_8_00, <Chunk_8_01, <Chunk_8_02, <Chunk_8_03, <Chunk_8_04, <Chunk_8_05, <Chunk_8_06
-ChunkIndexMSB:
-	.byte >Chunk_0_00, >Chunk_0_01, >Chunk_0_02, >Chunk_0_03, >Chunk_0_04, >Chunk_0_05, >Chunk_0_06, >Chunk_1_00, >Chunk_1_01, >Chunk_1_02, >Chunk_1_03, >Chunk_1_04, >Chunk_1_05, >Chunk_1_06, >Chunk_2_00, >Chunk_2_01, >Chunk_2_02, >Chunk_2_03, >Chunk_2_04, >Chunk_2_05, >Chunk_2_06, >Chunk_3_00, >Chunk_3_01, >Chunk_3_02, >Chunk_3_03, >Chunk_3_05, >Chunk_4_00, >Chunk_4_01, >Chunk_4_05, >Chunk_4_06, >Chunk_5_00, >Chunk_5_01, >Chunk_5_05, >Chunk_5_06, >Chunk_6_00, >Chunk_6_01, >Chunk_6_02, >Chunk_6_03, >Chunk_6_04, >Chunk_6_05, >Chunk_7_00, >Chunk_7_01, >Chunk_7_02, >Chunk_7_03, >Chunk_7_04, >Chunk_7_05, >Chunk_8_00, >Chunk_8_01, >Chunk_8_02, >Chunk_8_03, >Chunk_8_04, >Chunk_8_05, >Chunk_8_06
-ChunkSection:
-	.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-Section_0:
-	.byte $00, $01, $02, $03, $04, $05, $06
-	GOTOCHUNK 1
-Section_1:
-	.byte $07, $08, $09, $0A, $0B, $0C, $0D
-	GOTOCHUNK 1
-Section_2:
-	.byte $0E, $0F, $10, $11, $12, $13, $14
-	GOTOCHUNK 1
-Section_3:
-	.byte $15, $16, $17, $18, $18, $19, $19
-	GOTOCHUNK 1
-Section_4:
-	.byte $1A, $1B, $1B, $1B, $1B, $1C, $1D
-	GOTOCHUNK 1
-Section_5:
-	.byte $1E, $1F, $1F, $1F, $1F, $20, $21
-	GOTOCHUNK 1
-Section_6:
-	.byte $22, $23, $24, $25, $26, $27, $27
-	GOTOCHUNK 1
-Section_7:
-	.byte $28, $29, $2A, $2B, $2C, $2D, $2D
-	GOTOCHUNK 1
-Section_8:
-	.byte $2E, $2F, $30, $31, $32, $33, $34
-	GOTOCHUNK 1
-Chunk_0_00:
-	ins "/chunks/Flourishing Falls.0_00"
-Chunk_0_01:
-	ins "/chunks/Flourishing Falls.0_01"
-Chunk_0_02:
-	ins "/chunks/Flourishing Falls.0_02"
-Chunk_0_03:
-	ins "/chunks/Flourishing Falls.0_03"
-Chunk_0_04:
-	ins "/chunks/Flourishing Falls.0_04"
-Chunk_0_05:
-	ins "/chunks/Flourishing Falls.0_05"
-Chunk_0_06:
-	ins "/chunks/Flourishing Falls.0_06"
-Chunk_1_00:
-	ins "/chunks/Flourishing Falls.1_00"
-Chunk_1_01:
-	ins "/chunks/Flourishing Falls.1_01"
-Chunk_1_02:
-	ins "/chunks/Flourishing Falls.1_02"
-Chunk_1_03:
-	ins "/chunks/Flourishing Falls.1_03"
-Chunk_1_04:
-	ins "/chunks/Flourishing Falls.1_04"
-Chunk_1_05:
-	ins "/chunks/Flourishing Falls.1_05"
-Chunk_1_06:
-	ins "/chunks/Flourishing Falls.1_06"
-Chunk_2_00:
-	ins "/chunks/Flourishing Falls.2_00"
-Chunk_2_01:
-	ins "/chunks/Flourishing Falls.2_01"
-Chunk_2_02:
-	ins "/chunks/Flourishing Falls.2_02"
-Chunk_2_03:
-	ins "/chunks/Flourishing Falls.2_03"
-Chunk_2_04:
-	ins "/chunks/Flourishing Falls.2_04"
-Chunk_2_05:
-	ins "/chunks/Flourishing Falls.2_05"
-Chunk_2_06:
-	ins "/chunks/Flourishing Falls.2_06"
-Chunk_3_00:
-	ins "/chunks/Flourishing Falls.3_00"
-Chunk_3_01:
-	ins "/chunks/Flourishing Falls.3_01"
-Chunk_3_02:
-	ins "/chunks/Flourishing Falls.3_02"
-Chunk_3_03:
-	ins "/chunks/Flourishing Falls.3_03"
-Chunk_3_05:
-	ins "/chunks/Flourishing Falls.3_05"
-Chunk_4_00:
-	ins "/chunks/Flourishing Falls.4_00"
-Chunk_4_01:
-	ins "/chunks/Flourishing Falls.4_01"
-Chunk_4_05:
-	ins "/chunks/Flourishing Falls.4_05"
-Chunk_4_06:
-	ins "/chunks/Flourishing Falls.4_06"
-Chunk_5_00:
-	ins "/chunks/Flourishing Falls.5_00"
-Chunk_5_01:
-	ins "/chunks/Flourishing Falls.5_01"
-Chunk_5_05:
-	ins "/chunks/Flourishing Falls.5_05"
-Chunk_5_06:
-	ins "/chunks/Flourishing Falls.5_06"
-Chunk_6_00:
-	ins "/chunks/Flourishing Falls.6_00"
-Chunk_6_01:
-	ins "/chunks/Flourishing Falls.6_01"
-Chunk_6_02:
-	ins "/chunks/Flourishing Falls.6_02"
-Chunk_6_03:
-	ins "/chunks/Flourishing Falls.6_03"
-Chunk_6_04:
-	ins "/chunks/Flourishing Falls.6_04"
-Chunk_6_05:
-	ins "/chunks/Flourishing Falls.6_05"
-Chunk_7_00:
-	ins "/chunks/Flourishing Falls.7_00"
-Chunk_7_01:
-	ins "/chunks/Flourishing Falls.7_01"
-Chunk_7_02:
-	ins "/chunks/Flourishing Falls.7_02"
-Chunk_7_03:
-	ins "/chunks/Flourishing Falls.7_03"
-Chunk_7_04:
-	ins "/chunks/Flourishing Falls.7_04"
-Chunk_7_05:
-	ins "/chunks/Flourishing Falls.7_05"
-Chunk_8_00:
-	ins "/chunks/Flourishing Falls.8_00"
-Chunk_8_01:
-	ins "/chunks/Flourishing Falls.8_01"
-Chunk_8_02:
-	ins "/chunks/Flourishing Falls.8_02"
-Chunk_8_03:
-	ins "/chunks/Flourishing Falls.8_03"
-Chunk_8_04:
-	ins "/chunks/Flourishing Falls.8_04"
-Chunk_8_05:
-	ins "/chunks/Flourishing Falls.8_05"
-Chunk_8_06:
-	ins "/chunks/Flourishing Falls.8_06"
-*/
+.proc WaitForVBlank
+	lda VCOUNT		; Get Current Scanline / 2
+	cmp #VBLANK_SCANLINE	; Is it time for VBlank yet?
+	bne WaitForVBlank	; Not Equal -> Keep waiting
+	rts
+.endp
 
-/*
-ChunkIndexLSB:
-	.byte <Chunk_0_00, <Chunk_1_00, <Chunk_2_00, <Chunk_3_00, <Chunk_4_00, <Chunk_5_00, <Chunk_6_00, <Chunk_7_00, <Chunk_8_00
-ChunkIndexMSB:
-	.byte >Chunk_0_00, >Chunk_1_00, >Chunk_2_00, >Chunk_3_00, >Chunk_4_00, >Chunk_5_00, >Chunk_6_00, >Chunk_7_00, >Chunk_8_00
-ChunkSection:
-	.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-Section_0:
-	.byte $00
-	GOTOCHUNK 0
-Section_1:
-	.byte $01
-	GOTOCHUNK 0
-Section_2:
-	.byte $02
-	GOTOCHUNK 0
-Section_3:
-	.byte $03
-	GOTOCHUNK 0
-Section_4:
-	.byte $04
-	GOTOCHUNK 0
-Section_5:
-	.byte $05
-	GOTOCHUNK 0
-Section_6:
-	.byte $06
-	GOTOCHUNK 0
-Section_7:
-	.byte $07
-	GOTOCHUNK 0
-Section_8:
-	.byte $08
-	GOTOCHUNK 0
-Chunk_0_00:
-	ins "/chunks/stranded on io.0_00"
-Chunk_1_00:
-	ins "/chunks/stranded on io.1_00"
-Chunk_2_00:
-	ins "/chunks/stranded on io.2_00"
-Chunk_3_00:
-	ins "/chunks/stranded on io.3_00"
-Chunk_4_00:
-	ins "/chunks/stranded on io.4_00"
-Chunk_5_00:
-	ins "/chunks/stranded on io.5_00"
-Chunk_6_00:
-	ins "/chunks/stranded on io.6_00"
-Chunk_7_00:
-	ins "/chunks/stranded on io.7_00"
-Chunk_8_00:
-	ins "/chunks/stranded on io.8_00"
-*/
+;* ----------------------------------------------------------------------------
 
-ChunkIndexLSB:
-	.byte <Chunk_0_00, <Chunk_1_00, <Chunk_2_00, <Chunk_3_00, <Chunk_4_00, <Chunk_5_00, <Chunk_6_00, <Chunk_7_00, <Chunk_8_00
-	.byte <Chunk_9_00, <Chunk_A_00, <Chunk_B_00, <Chunk_C_00, <Chunk_D_00, <Chunk_E_00, <Chunk_F_00, <Chunk_G_00, <Chunk_H_00
-ChunkIndexMSB:
-	.byte >Chunk_0_00, >Chunk_1_00, >Chunk_2_00, >Chunk_3_00, >Chunk_4_00, >Chunk_5_00, >Chunk_6_00, >Chunk_7_00, >Chunk_8_00
-	.byte >Chunk_9_00, >Chunk_A_00, >Chunk_B_00, >Chunk_C_00, >Chunk_D_00, >Chunk_E_00, >Chunk_F_00, >Chunk_G_00, >Chunk_H_00
-ChunkSection:
-	.word Section_0, Section_1, Section_2, Section_3, Section_4, Section_5, Section_6, Section_7, Section_8
-Section_0:
-	.byte $00, $09
-	GOTOCHUNK 1
-Section_1:
-	.byte $01, $0A
-	GOTOCHUNK 1
-Section_2:
-	.byte $02, $0B
-	GOTOCHUNK 1
-Section_3:
-	.byte $03, $0C
-	GOTOCHUNK 1
-Section_4:
-	.byte $04, $0D
-	GOTOCHUNK 1
-Section_5:
-	.byte $05, $0E
-	GOTOCHUNK 1
-Section_6:
-	.byte $06, $0F
-	GOTOCHUNK 1
-Section_7:
-	.byte $07, $10
-	GOTOCHUNK 1
-Section_8:
-	.byte $08, $11
-	GOTOCHUNK 1
-Chunk_0_00:
-	ins "/chunks/io intro.0_00"
-Chunk_1_00:
-	ins "/chunks/io intro.1_00"
-Chunk_2_00:
-	ins "/chunks/io intro.2_00"
-Chunk_3_00:
-	ins "/chunks/io intro.3_00"
-Chunk_4_00:
-	ins "/chunks/io intro.4_00"
-Chunk_5_00:
-	ins "/chunks/io intro.5_00"
-Chunk_6_00:
-	ins "/chunks/io intro.6_00"
-Chunk_7_00:
-	ins "/chunks/io intro.7_00"
-Chunk_8_00:
-	ins "/chunks/io intro.8_00"
-Chunk_9_00:
-	ins "/chunks/io loop.0_00"
-Chunk_A_00:
-	ins "/chunks/io loop.1_00"
-Chunk_B_00:
-	ins "/chunks/io loop.2_00"
-Chunk_C_00:
-	ins "/chunks/io loop.3_00"
-Chunk_D_00:
-	ins "/chunks/io loop.4_00"
-Chunk_E_00:
-	ins "/chunks/io loop.5_00"
-Chunk_F_00:
-	ins "/chunks/io loop.6_00"
-Chunk_G_00:
-	ins "/chunks/io loop.7_00"
-Chunk_H_00:
-	ins "/chunks/io loop.8_00"
+;* Wait for a specific number of Frames, ranging from 1 and 256
+;* Set the parameter in the X Register before calling this routine
+
+.proc WaitForSomeTime
+	:2 sta WSYNC		; Forcefully increment VCOUNT at least once
+	jsr WaitForVBlank	; Wait until the end of the current Frame
+	dex:bne WaitForSomeTime	; if (--X != 0) -> Keep waiting
+	rts
+.endp
+
+;* ----------------------------------------------------------------------------
+	
+;* Detect the actual Machine Region in order to adjust Playback Speed among other things
+;* PAL -> 0, NTSC -> 1
+
+.proc DetectMachineRegion
+	lda VCOUNT
+	beq DetectMachineRegion_a
+	tax
+	bne DetectMachineRegion
+	
+DetectMachineRegion_a:
+	sta ZPZX2.MachineRegion
+	cpx #PAL_SCANLINE-1
+	spl:inc ZPZX2.MachineRegion
+	rts
+.endp
+
+;* ----------------------------------------------------------------------------
+
+;* Set Playback speed using precalculated lookup tables, depending on the Machine Region
+;* Cross-region adjustments are also supported, with few compatibility compromises
+
+.proc SetPlaybackSpeed
+	lda ZPZX2.MachineRegion
+	bit ZPZX2.AdjustSpeed
+	bpl SetPlaybackSpeed_b
+	cmp ZPZX2.SongRegion
+	beq SetPlaybackSpeed_b
+
+SetPlaybackSpeed_a:
+	clc
+	adc #2
+	
+SetPlaybackSpeed_b:
+	asl @
+	asl @
+	asl @
+	adc ZPZX2.SongSpeed
+	tay
+	lda ScanlineDivisionTable,y
+	sta ZPZX2.SyncDivision
+	lda ScanlineCountTable,y
+	sta ZPZX2.SyncCount
+	
+SetPlaybackSpeed_c:
+	lda #VLINE
+	sta ZPZX2.LastCount
+	ldy #0
+	sty ZPZX2.SyncOffset
+	dey
+	sty ZPZX2.SyncStatus
+	rts
+	
+ScanlineDivisionTable:
+DivPAL	.byte $9C,$4E,$34,$27,$1F,$1A,$16,$13
+DivNTSC	.byte $83,$42,$2C,$21,$1A,$16,$13,$10
+OffPAL	.byte $82,$41,$2D,$23,$1A,$14,$14,$0F
+OffNTSC	.byte $9C,$4E,$34,$27,$1E,$1A,$18,$15
+
+ScanlineCountTable:
+NumPAL	.byte $9C,$9C,$9C,$9C,$9B,$9C,$9A,$98
+NumNTSC	.byte $83,$84,$84,$84,$82,$84,$85,$80
+FixPAL	.byte $9C,$9C,$A2,$A8,$9C,$90,$A8,$90
+FixNTSC	.byte $82,$82,$82,$82,$7D,$82,$8C,$8C
+.endp
+
+;* ----------------------------------------------------------------------------
+
+.proc WaitForScanline
+	lda ZPZX2.SyncOffset
+	asl ZPZX2.SyncStatus
+	bcc WaitForScanlineSkip
+	
+WaitForScanlineContinue:
+	lda VCOUNT
+	tax
+	sbc ZPZX2.LastCount
+	scs:adc ZPZX2.SyncCount
+	bcs WaitForScanlineNext
+	adc #-1
+	eor #-1
+	adc ZPZX2.SyncOffset
+	sta ZPZX2.SyncOffset
+	lda #0
+	
+WaitForScanlineNext:
+	sta ZPZX2.SyncDelta
+	stx ZPZX2.LastCount
+	lda ZPZX2.SyncOffset
+	sbc ZPZX2.SyncDelta
+	sta ZPZX2.SyncOffset
+	bcs WaitForScanlineContinue
+	
+WaitForScanlineSkip:
+	adc ZPZX2.SyncDivision
+	sta ZPZX2.SyncOffset
+	ror ZPZX2.SyncStatus
+	
+WaitForScanlineDone:
+	rts
+.endp
+
+;* ----------------------------------------------------------------------------
+
+.proc CheckForTwoToneBit
+CheckForTwoToneBitLeft:
+	ldx #$03
+	lda ZPZX2.Chunk[1].PokeyByte	; AUDC0
+	cmp #$F0
+	bcs CheckForTwoToneBitLeft_a
+	tay
+	and #$10
+	beq CheckForTwoToneBitLeft_a
+	tya
+	eor #$10
+	sta ZPZX2.Chunk[1].PokeyByte
+	ldx #$8B
+	
+CheckForTwoToneBitLeft_a:
+	stx ZPZX2.PokeySkctl
+
+CheckForTwoToneBitDone:
+	rts
+.endp
+
+;* ----------------------------------------------------------------------------
+
+;* ZX2-based SAP-R playback music driver, with very rudimentary functionalities
+
+	icl "dzx2.asm"	
+	run Start
+	
+;* ----------------------------------------------------------------------------
+
+;* ZX2-Chunk data and lookup tables
+
+	org ZX2DATA
+	icl "SongIndex.asm"
+	.echo "> ZX2DATA size of ", * - ZX2DATA, ", from ", ZX2DATA, " to ", *
+	
+;* ----------------------------------------------------------------------------
 
