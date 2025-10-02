@@ -24,10 +24,13 @@ RM = del
 #dzx02: dzx02.c
 #	$(CC) $(CFLAGS) -o ./build/dzx02$(EXTENSION) dzx02.c
 
-all: sapsplit
+all: sapsplit zx02
 	
 sapsplit: sapsplit.c sapsplit.h ./ZX02/optimize.c ./ZX02/compress.c ./ZX02/memory.c ./ZX02/zx02.h
 	$(CC) $(CFLAGS) -o ./build/sapsplit$(EXTENSION) sapsplit.c ./ZX02/optimize.c ./ZX02/compress.c ./ZX02/memory.c
+
+zx02: ./ZX02/zx02.c ./ZX02/optimize.c ./ZX02/compress.c ./ZX02/memory.c ./ZX02/zx02.h
+	$(CC) $(CFLAGS) -o ./build/zx02$(EXTENSION) ./ZX02/zx02.c ./ZX02/optimize.c ./ZX02/compress.c ./ZX02/memory.c
 
 clean:
 	$(RM) *.obj

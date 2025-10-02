@@ -81,6 +81,7 @@ typedef struct sapSplitState_t
 	BYTE* fileBuffer;
 	char* inputName;
 	char* outputName;
+	char* chunkStream;
 	UINT fileSize;
 	UINT channelCount;
 	UINT channelSize;

@@ -76,8 +76,7 @@ void FindDuplicateChunk(TSapSplitState* pState, TChunkSection* pChunkFrom, TChun
 		//printf("Skipped comparison: Chunk could not be compared to itself\n");
 		return;
 	}
-		
-	//if (pChunkFrom->isDuplicate)
+	
 	if (pChunkFrom->reference)
 	{
 		//printf("Skipped comparison: Chunk was already identified as a duplicate\n");
@@ -92,11 +91,10 @@ void FindDuplicateChunk(TSapSplitState* pState, TChunkSection* pChunkFrom, TChun
 	
 	if (!(memcmp(pChunkFrom->buffer, pChunkTo->buffer, pChunkFrom->size)))
 	{
-		//int chunkFrom = pChunkFrom->section + pChunkFrom->channel * pState->sectionCount;
-		//int chunkTo = pChunkTo->section + pChunkTo->channel * pState->sectionCount;
-		//printf("Chunk %02X is a duplicate of Chunk %02X\n\n", chunkTo, chunkFrom);
+		printf("Chunk [%02X][%02X] is a duplicate of Chunk [%02X][%02X]\n",
+			pChunkTo->channel, pChunkTo->section, pChunkFrom->channel, pChunkFrom->section);
+		
 		pChunkTo->reference = pChunkFrom;
-		//pChunkTo->isDuplicate = true;
 	}
 	
 }
@@ -200,7 +198,14 @@ TChunkSection* CreateChunk(BYTE* buffer, UINT size, UINT offset, UINT index, UIN
 	pChunk->index = index;
 	pChunk->channel = channel;
 	pChunk->section = section;
-	//pChunk->isDuplicate = false;
+	
+	UINT byteCount = 0;
+	
+	for (UINT i = 0; i < size; i++)
+		byteCount += (pChunk->buffer[0] == pChunk->buffer[i]);
+	
+	if (byteCount == size)
+		printf("Warning: Chunk [%02X][%02X] filled with $%02X bytes\n", channel, section, pChunk->buffer[0]);
 	
 	return pChunk;
 }
@@ -270,6 +275,10 @@ void ProcessArguments(TSapSplitState* pState, int argc, char** argv)
 		{
 			switch (argv[i][1])
 			{
+			case 'c':
+				pState->chunkStream = argv[++i];
+				continue;
+			
 			case 'i':
 				pState->inputName = argv[++i];
 				continue;
@@ -322,14 +331,36 @@ void LoadInputFile(TSapSplitState* pState)
 	
 	if (!in)
 		Quit(INPUT_ERROR, pState->inputName);
+		
+	// Skip SAP header
+	char header[128];
 	
+	fseek(in, 0, SEEK_SET);
+	size_t pos = ftell(in);
+	
+	while(0 != fgets(header, 80, in))
+	{
+		size_t ln = strlen(header);
+		
+		if( ln < 1 || header[ln-1] != '\n' )
+			break;
+		
+		pos = ftell(in);
+		
+		if( (ln == 2 && header[ln-2] == '\r') || (ln == 1) )
+			break;
+	}
+	
+	// Read all data
+	fseek(in, pos, SEEK_SET);
+	pos = ftell(in);
 	fseek(in, 0, SEEK_END);
 	
 	// Identify the file size, and reject anything not matching a multiple of streamCount
-	if ((pState->fileSize = ftell(in)) % pState->channelCount)
+	if ((pState->fileSize = (ftell(in) - pos)) % pState->channelCount)
 		Quit(INVALID_DATA, pState->inputName);
 	
-	fseek(in, 0, SEEK_SET);
+	fseek(in, pos, SEEK_SET);
 	
 	// Allocate the file buffer memory using the framecount for reference
 	if (!(pState->fileBuffer = (BYTE*)malloc(pState->fileSize * sizeof(BYTE))))
@@ -348,25 +379,107 @@ void LoadInputFile(TSapSplitState* pState)
 	// Set the number of bytes to process for each channel stream
 	if (!(pState->channelSize = pState->fileSize / pState->channelCount))
 		Quit(FAILURE, "Fatal Error: A size of 0 could not be used");
+	
+	printf("Loaded '%s'\n", pState->inputName);
+	printf("Effective Size: %u Bytes\n", pState->fileSize);
 }
 
 // Analyse the streamSize to find the optimal section size per channel stream
 void AnalyseStreams(TSapSplitState* pState)
-{
-	int count = 0;
-			
-	printf("Integral divisions per stream:\n");
+{	
+	UINT blockCount = 0;
+	UINT blockSize[MAX_SECTION_COUNT];
+	memset(&blockSize, 0, sizeof(UINT));
 	
-	for (int j = 1; j < MAX_SECTION_COUNT; j++)
+	printf("Channel Count: %u\n", pState->channelCount);
+	printf("Frame Count: %u\n", pState->channelSize);
+	
+	//pState->optimisationMode = AUDC;
+	SplitStreams(pState);
+	
+	if (pState->chunkStream)
 	{
-		if (pState->channelSize % j)
-			continue;
+		char* offset = pState->chunkStream;
+		UINT maxOffset = strlen(pState->chunkStream);
+		int frameCount = pState->channelSize;
 		
-		printf("%i (%i bytes)\n", j, pState->channelSize / j);
-		count++;
+		printf("Chunk Stream:\n");
+		
+		for (blockCount; blockCount < MAX_SECTION_COUNT; blockCount++)
+		{
+			if (maxOffset == 0)
+				break;
+			
+			blockSize[blockCount] = atoi(offset);
+			frameCount -= blockSize[blockCount];
+			
+			printf("[%u][%u], remainder: %i frames\n", blockCount, blockSize[blockCount], frameCount);
+			
+			if (frameCount < 0)
+				Quit(FAILURE, "Fatal error: The number of frames is shorter than expected");
+			
+			while (maxOffset > 0)
+			{
+				offset++;
+				maxOffset--;
+				
+				if (*offset == ',' || *offset == ' ')
+				{
+					offset++;
+					maxOffset--;
+					break;
+				}
+			}
+		}
+
+		if (frameCount > 0)
+			Quit(FAILURE, "Fatal error: The number of frames is bigger than expected");
+		
+		pState->sectionCount = blockCount;
 	}
 	
-	printf("For a total of %i possible numbers\n\n", count);
+	printf("Section Count: %u\n", pState->sectionCount);
+	
+	for (int i = 0; i < pState->channelCount; i++)
+	{
+		UINT offset = 0;
+		
+		for (int j = 0; j < pState->sectionCount; j++)
+		{
+			BYTE* pBuffer = &pState->channelStream[i][offset];
+			UINT size = blockSize[j] > 0 ? blockSize[j] : pState->channelSize;
+			UINT index = j + i * pState->sectionCount;
+			pState->sectionStream[pState->chunkCount] = CreateChunk(pBuffer, size, pState->chunkCount, index, i, j);
+			offset += size;
+			pState->chunkCount++;
+		}
+	}
+	
+	for (int i = 0; i < pState->chunkCount; i++)
+		for (int j = 0; j < pState->chunkCount; j++)
+			FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+	
+	for (int i = 0; i < pState->chunkCount; i++)
+	{
+		TChunkSection* pChunk = pState->sectionStream[i];
+		
+		if (!pChunk->reference)
+			CompressChunk(pChunk);		
+	}
+	
+	for (int i = 0; i < pState->chunkCount; i++)
+		for (int j = 0; j < pState->chunkCount; j++)
+			FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+			
+	for (int i = 0; i < pState->chunkCount; i++)
+	{
+		TChunkSection* pChunk = pState->sectionStream[i];
+		
+		if (!pChunk->reference)
+			pState->effectiveSize += pChunk->size;
+	}
+	
+	printf("Effective Size: %u Bytes\n", pState->effectiveSize);
 }
 
 // Split each channel to individual byte stream before processing them further
@@ -436,7 +549,7 @@ void SplitAsChunks(TSapSplitState* pState)
 	//TCompressionMode bestCompression = ZX2;	//NO_COMPRESSION;
 	
 	printf("Bruteforcing optimal chunks pattern, it may take some time...\n\n");
-/*	
+//	
 	// Split each channels with the optimisation patch needed for this iteration
 	for (pState->optimisationMode = NO_OPTIMISATION; pState->optimisationMode <= ALL_OPTIMISATIONS; pState->optimisationMode++)
 	{
@@ -453,6 +566,9 @@ void SplitAsChunks(TSapSplitState* pState)
 			pState->chunkCount = 0;
 			pState->chunkSize = pState->channelSize / pState->sectionCount;
 			remainder = pState->channelSize % pState->sectionCount;
+			
+			//if (remainder)
+			//	continue;
 			
 			offset = 0;
 			
@@ -549,10 +665,11 @@ void SplitAsChunks(TSapSplitState* pState)
 		bestIteration, bestSize, bestCount, bestSection, bestOptimisation);
 		fflush(stdout);
 	}
-*/	
+//
+	
 	printf("Finished bruteforcing, the output will match the best iteration\n\n");
 	fflush(stdout);
-/*	
+//	
 	// Update the variables for the best iteration score to actually output
 	pState->optimisationMode = bestOptimisation;
 	//pState->compressionMode = bestCompression;
@@ -562,8 +679,9 @@ void SplitAsChunks(TSapSplitState* pState)
 	pState->chunkCount = 0;
 	pState->chunkSize = pState->channelSize / pState->sectionCount;
 	remainder = pState->channelSize % pState->sectionCount;
-*/
+//
 
+/*
 	pState->optimisationMode = 1;
 	pState->sectionCount = 113;
 	pState->effectiveSize = 0;
@@ -571,6 +689,7 @@ void SplitAsChunks(TSapSplitState* pState)
 	pState->chunkCount = 0;
 	pState->chunkSize = pState->channelSize / pState->sectionCount;
 	remainder = pState->channelSize % pState->sectionCount;
+*/
 	
 	offset = 0;
 	
@@ -711,7 +830,7 @@ void SplitAsChunks(TSapSplitState* pState)
 	printf("Optimisation %i was found to be the most efficient\n", pState->optimisationMode);
 	printf("A total of %i iterations were processed\n\n", iteration);
 
-/*	
+//	
 	// Phase 4: Create a lookup table to reconstruct the original data using Chunks
 	printf("Creating the lookup table for reconstructing the original data using Chunks...\n\n");
 
@@ -777,35 +896,82 @@ void SplitAsChunks(TSapSplitState* pState)
 		printf("Chunk_%X_%02X:\n\t", pChunk->channel, pChunk->section);
 		printf("ins \"%s.%X_%02X\"\n", pState->outputName, pChunk->channel, pChunk->section);
 	}
-*/
+//
 }
 
 // Split channel streams from input file and save them as individual files
 void SplitAsChannels(TSapSplitState* pState)
 {
-	UINT offset = 0;
-	TChunkSection* pChunk;
-	//pState->optimisationMode = 1;
+	UINT bestSize = UINT_MAX;
+	UINT bestOptimisation = NO_OPTIMISATION;
+	
+	for (pState->optimisationMode = NO_OPTIMISATION; pState->optimisationMode <= ALL_OPTIMISATIONS; pState->optimisationMode++)
+	{
+		UINT size = 0;
+		pState->chunkCount = 0;
+		
+		SplitStreams(pState);
+		
+		for (int i = 0; i < pState->channelCount; i++)
+			pState->sectionStream[i] = CreateChunk(pState->channelStream[i], pState->channelSize, pState->chunkCount++, i, i, 0);
+		
+		for (int i = 0; i < pState->channelCount; i++)
+			for (int j = 0; j < pState->channelCount; j++)
+				FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+		
+		for (int i = 0; i < pState->channelCount; i++)
+			CompressChunk(pState->sectionStream[i]);
+		
+		for (int i = 0; i < pState->channelCount; i++)
+			for (int j = 0; j < pState->channelCount; j++)
+				FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+		
+		for (int i = 0; i < pState->channelCount; i++)
+		{
+			TChunkSection* pChunk = pState->sectionStream[i];
+			
+			if (pChunk->reference)
+				continue;
+			
+			size += pChunk->size;
+		}
+		
+		if (size < bestSize)
+		{
+			bestSize = size;
+			bestOptimisation = pState->optimisationMode;	
+		}
+		
+		DeleteAllChunks(pState);
+		DeleteAllStreams(pState);
+	}
+	
+	pState->chunkCount = 0;
+	pState->optimisationMode = bestOptimisation;
 	SplitStreams(pState);
 	
 	for (int i = 0; i < pState->channelCount; i++)
-	{
-		pChunk = CreateChunk(pState->channelStream[i], pState->channelSize, offset, i, i, 0);
-		
-		if (pState->compressionMode == ZX2)
-			CompressChunk(pChunk);
-		
-		WriteChunk(pState, pChunk);
-		offset += pChunk->size;
-		
-		if (pState->compressionMode == ZX2)
-			free(pChunk->buffer);
-		
-		free(pChunk);
-	}
+		pState->sectionStream[i] = CreateChunk(pState->channelStream[i], pState->channelSize, pState->chunkCount++, i, i, 0);
 	
-	printf("\nEffective size: %i bytes, reduced from %i bytes (%0.02f%% of original size)\n",
+	for (int i = 0; i < pState->channelCount; i++)
+		for (int j = 0; j < pState->channelCount; j++)
+			FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+	
+	for (int i = 0; i < pState->channelCount; i++)
+		CompressChunk(pState->sectionStream[i]);
+	
+	for (int i = 0; i < pState->channelCount; i++)
+		for (int j = 0; j < pState->channelCount; j++)
+			FindDuplicateChunk(pState, pState->sectionStream[i], pState->sectionStream[j]);
+	
+	for (int i = 0; i < pState->channelCount; i++)
+		WriteChunk(pState, pState->sectionStream[i]);
+	
+	printf("\nWrote %i unique chunks, merged %i duplicated chunks, for a total of %i chunks\n",
+	pState->effectiveCount, pState->chunkCount - pState->effectiveCount, pState->chunkCount);
+	printf("Effective size: %i bytes, reduced from %i bytes (%0.02f%% of original size)\n",
 	pState->effectiveSize, pState->fileSize, pState->effectiveSize * 100.0 / pState->fileSize);
+	printf("Optimisation %i was found to be the most efficient\n", pState->optimisationMode);
 }
 
 void ProcessStreams(TSapSplitState* pState)
@@ -981,6 +1147,10 @@ void CompressChunk(TChunkSection* pChunk)
 {
 	if (!pChunk)
 		Quit(FAILURE, NULL);
+	
+	// Already processed, nothing to do here
+	if (pChunk->reference)
+		return;
 	
 	zx02_state* pZx02State = calloc(sizeof(zx02_state), 1);
 	
